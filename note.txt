@@ -1,0 +1,68 @@
+🟢 1. MongoDB — The Database
+-------------------------------
+Think of MongoDB as:
+🧺 A big storage room where your app’s data lives permanently.
+
+It is a NoSQL database — instead of tables (like MySQL), it stores data in documents (JSON format).
+
+Example data inside MongoDB:
+
+{
+  "_id": "6715f28b82d6",
+  "name": "Biswojit",
+  "email": "biswojit@gmail.com",
+  "age": 23
+}
+
+🧠 What MongoDB does:
+Stores data
+Organizes data in collection
+Supports queries (find, insert, update, delete)
+Handles indexing, performance, replication, backups
+It’s the engine of your data.
+
+2. Prisma — The Data Access Layer (ORM)
+----------------------------------------
+Think of Prisma as:
+🧑‍💻 A smart assistant that talks to MongoDB for you — cleanly, safely, and with TypeScript support.
+
+It’s not a database.
+
+It’s an ORM (Object Relational Mapper) → in simple terms, a tool to make database work easier in your backend code.
+
+Instead of writing raw queries like:
+
+db.users.find({ name: "Biswojit" })
+
+You write:
+
+const user = await prisma.user.findMany({
+  where: { name: "Biswojit" }
+});
+
+✨ What Prisma gives you:
+Auto-generated TypeScript types (super useful for bigger apps).
+Schema-based modeling (easy to maintain and change).
+Clean and structured queries.
+Middleware support (e.g., logging, auth checks).
+Easier migrations / schema evolution.
+Works with multiple databases — MongoDB, PostgreSQL, MySQL, etc.
+
+
+2. Winston:-
+-------------
+- It is the actual logger engine
+
+3. winston-rotate-file:-
+--------------------------
+-We use it to write logs to files that rotate by date.
+
+4. nest-winston:-
+-------------------
+-Used to connect Winston into NestJS so Nest's logging goes through Winston.
+
+Order of caling exception filters:-
+Nest calls them in order:
+1. Prisma filter
+2. Mongo filter
+3. AllExceptions filter
