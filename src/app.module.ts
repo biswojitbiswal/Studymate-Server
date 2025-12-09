@@ -8,6 +8,7 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './common/guards/auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { AuthModule } from './auth/auth.module';
 
 
 @Module({
@@ -16,7 +17,8 @@ import { RolesGuard } from './common/guards/roles.guard';
       isGlobal: true, // makes .env available everywhere
     }),
     LoggerModule,
-    PrismaModule
+    PrismaModule,
+    AuthModule
   ],
   providers: [
     AllExceptionsFilter,

@@ -7,6 +7,12 @@ import { AllExceptionsFilter } from './common/filters/all-exception.filter';
 import { MongoExceptionFilter } from './common/filters/mongo-exception.filter';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { BadRequestException, ValidationPipe, VersioningType } from '@nestjs/common';
+import * as bodyParser from 'body-parser';
+import * as express from 'express';
+import { join } from 'path';
+
+
 
 async function bootstrap() {
 
@@ -16,6 +22,13 @@ async function bootstrap() {
     }),
   });
 
+
+  app.enableCors({
+    origin: true, // or specific domains
+    credentials: true,
+  });
+
+
   // get logger instance (the same instance is injected into filters)
   const winstonLogger = app.get(WINSTON_MODULE_PROVIDER);
 
@@ -24,6 +37,40 @@ async function bootstrap() {
     new ResponseInterceptor(),
     new HttpLoggerInterceptor(winstonLogger)
   );
+
+
+  app.use('/uploads', express.static(join(process.cwd(), 'public', 'uploads')));
+  // app.useStaticAssets(join(__dirname, '..', 'public', 'uploads'), {
+  //   prefix: '/uploads/',
+  // });
+
+
+
+  app.use(bodyParser.json({ limit: '25mb' }));
+  app.use(bodyParser.urlencoded({ limit: '25mb', extended: true }));
+
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      stopAtFirstError: true,
+      exceptionFactory: (errors) => {
+        const firstError = errors[0];
+        const constraints = firstError.constraints;
+        const message = constraints
+          ? Object.values(constraints)[0]
+          : 'Validation error';
+        return new BadRequestException(message);
+      },
+    }),
+  );
+
+  app.setGlobalPrefix('api')
+
+  app.enableVersioning({
+    type: VersioningType.URI
+  })
 
   // get the DI-created filter instances and register globally
   const prismaFilter = app.get(PrismaExceptionFilter);

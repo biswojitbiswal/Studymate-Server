@@ -8,9 +8,101 @@ datasource db {
 }
 
 
-model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
+enum Roles{
+  STUDENT
+  TUTOR
+  ADMIN
 }
+
+
+enum AuthProvider {
+  CREDENTIALS
+  GOOGLE
+  APPLE
+}
+
+model User {
+  id                      String                    @id @default(auto()) @map("_id") @db.ObjectId
+  name                    String?
+  email                   String                    @unique
+  phone                   String?                   @unique
+  password                String?
+  avatar                  String?
+  role                    Roles                     @default(STUDENT)
+
+  provider                AuthProvider              @default(CREDENTIALS)
+
+  isEmailVerified         Boolean                   @default(false)
+  isPhoneVerified         Boolean                   @default(false)
+
+  student                 Student[]
+  tutor                   Tutor[]
+
+
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+}
+
+model Student{
+  id                      String                    @id @default(auto()) @map("_id") @db.ObjectId
+
+  user                    User                      @relation(fields: [userId], references: [id])
+  userId                  String                    @unique @db.ObjectId
+
+  classGrade              String?
+  board                   String?
+  stream                  String?
+
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+}
+
+enum TutorStatus {
+  NOT_APPLIED      // just signed up as tutor but hasn't filled form yet
+  PENDING_REVIEW   // form submitted, waiting for admin
+  APPROVED         // verified tutor
+  REJECTED         // rejected, can re-apply
+  SUSPENDED        // blocked by admin
+}
+
+
+model Tutor{
+  id                      String                    @id @default(auto()) @map("_id") @db.ObjectId
+
+  user                    User                      @relation(fields: [userId], references: [id])
+  userId                  String                    @unique @db.ObjectId
+
+  shortTitle              String?
+  subjects                String[]
+  levels                  String[]
+  yearsOfExp              Int?
+  bio                     String?
+  qualification           String?
+  links                   String[]
+  isVerified              Boolean                   @default(false)
+  tutorStatus             TutorStatus               @default(NOT_APPLIED)
+
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  verificationRequests    TutorVerificationRequest[]
+}
+
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model TutorVerificationRequest {
+  id                          String                    @id @default(auto()) @map("_id") @db.ObjectId
+  tutorId                     String                    @db.ObjectId
+  tutor                       Tutor                     @relation(fields: [tutorId], references: [id])
+  status                      VerificationStatus        @default(PENDING)
+  adminId                     String?                   @db.ObjectId
+  adminNote                   String?
+  documents                   String[]
+  createdAt                   DateTime                  @default(now())
+  updatedAt                   DateTime                  @updatedAt
+}
+
