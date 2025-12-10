@@ -35,6 +35,9 @@ model User {
   isEmailVerified         Boolean                   @default(false)
   isPhoneVerified         Boolean                   @default(false)
 
+  hashedRefreshToken      String?
+  refreshTokenExpiresAt   DateTime?
+
   student                 Student[]
   tutor                   Tutor[]
 

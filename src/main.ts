@@ -11,6 +11,8 @@ import { BadRequestException, ValidationPipe, VersioningType } from '@nestjs/com
 import * as bodyParser from 'body-parser';
 import * as express from 'express';
 import { join } from 'path';
+import cookieParser from 'cookie-parser';
+
 
 
 
@@ -48,6 +50,7 @@ async function bootstrap() {
 
   app.use(bodyParser.json({ limit: '25mb' }));
   app.use(bodyParser.urlencoded({ limit: '25mb', extended: true }));
+  app.use(cookieParser());
 
 
   app.useGlobalPipes(

@@ -4,6 +4,7 @@ import { SigninDto, SignupDto } from "./dtos/auth.dto";
 import { AuthProvider, Roles } from '@prisma/client'
 import * as bcrypt from 'bcrypt';
 import { JwtService } from "@nestjs/jwt";
+import { generateRefreshTokenPlain, hashRefreshToken, verifyRefreshToken } from "src/common/utils/token.util";
 
 
 @Injectable({})
@@ -76,60 +77,46 @@ export class AuthService {
 
     async signin(dto: SigninDto) {
         try {
-            const user = await this.prisma.user.findUnique({
-                where: { email: dto.email },
-            });
+            const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+            if (!user) throw new NotFoundException('User not found');
 
-            // 1. User must exist
-            if (!user) {
-                throw new NotFoundException(
-                    'User not found, Please complete the signup process',
-                );
-            }
-
-            // 2. Check provider (only allow CREDENTIALS here)
             if (user.provider !== AuthProvider.CREDENTIALS) {
-                throw new BadRequestException(
-                    `This account is registered using ${user.provider}. Please login with ${user.provider.toLowerCase()} sign-in.`,
-                );
+                throw new BadRequestException(`This account uses ${user.provider}`);
             }
 
-            // 3. Check verification (email or phone – your current condition)
             if (!user.isEmailVerified && !user.isPhoneVerified) {
-                throw new BadRequestException('Please complete the verification process');
+                throw new BadRequestException('Please complete verification');
             }
 
-            // 4. Check role matches
             if (user.role !== dto.role) {
-                // e.g. trying to login as TUTOR with a STUDENT account
                 throw new BadRequestException('User associated with another account');
             }
 
-            // 5. Ensure user has a password (should always be true for CREDENTIALS)
             if (!user.password) {
-                throw new BadRequestException(
-                    'Password login is not available for this account',
-                );
+                throw new BadRequestException('Password login not available');
             }
 
-            // 6. Verify password
             const isPasswordValid = await bcrypt.compare(dto.password, user.password);
-            if (!isPasswordValid) {
-                throw new BadRequestException('Invalid email or password');
-            }
+            if (!isPasswordValid) throw new BadRequestException('Invalid email or password');
 
-            // 7. Generate JWT token
-            const payload = {
-                sub: user.id,
-                email: user.email,
-                role: user.role,
-            };
+            // create access token
+            const payload = { id: user.id, email: user.email, role: user.role };
+            const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '30m' });
 
-            const accessToken = await this.jwtService.signAsync(payload);
+            // create refresh token plain & hashed, save on user with expiry (e.g., 30 days)
+            const refreshPlain = generateRefreshTokenPlain();
+            const hashed = await hashRefreshToken(refreshPlain);
+            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 30 days
 
-            // 8. Return sanitized user + token
+            await this.prisma.user.update({
+                where: { id: user.id },
+                data: { hashedRefreshToken: hashed, refreshTokenExpiresAt: expiresAt },
+            });
+
+            // return accessToken + user + refreshPlain (we will set cookie in controller / proxy)
             return {
                 accessToken,
+                refreshToken: refreshPlain,
                 user: {
                     id: user.id,
                     name: user.name,
@@ -143,6 +130,64 @@ export class AuthService {
             if (error instanceof HttpException) throw error;
             throw new InternalServerErrorException('Internal server error');
         }
+    }
+
+
+    async refreshTokens(userId: string, refreshPlain: string) {
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (!user || !user.hashedRefreshToken) {
+            throw new BadRequestException('Invalid refresh token');
+        }
+
+        // check expiry
+        if (!user.refreshTokenExpiresAt || user.refreshTokenExpiresAt < new Date()) {
+            // expiry or not set
+            // clear stored token
+            await this.prisma.user.update({ where: { id: userId }, data: { hashedRefreshToken: null, refreshTokenExpiresAt: null } });
+            throw new BadRequestException('Refresh token expired');
+        }
+
+        const isValid = await verifyRefreshToken(refreshPlain, user.hashedRefreshToken);
+        if (!isValid) {
+            // possible theft: clear stored token
+            await this.prisma.user.update({ where: { id: userId }, data: { hashedRefreshToken: null, refreshTokenExpiresAt: null } });
+            throw new BadRequestException('Invalid refresh token');
+        }
+
+        // rotate: create new refresh token and update user
+        const newRefreshPlain = generateRefreshTokenPlain();
+        const newHashed = await hashRefreshToken(newRefreshPlain);
+        const newExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: { hashedRefreshToken: newHashed, refreshTokenExpiresAt: newExpiresAt },
+        });
+
+        // new access token
+        const payload = { sub: user.id, email: user.email, role: user.role };
+        const newAccessToken = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
+
+        return {
+            accessToken: newAccessToken,
+            refreshToken: newRefreshPlain,
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                name: user.name,
+                avatar: user.avatar
+            }
+        };
+    }
+
+    // signout: clear refresh token for user
+    async signout(userId: string) {
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: { hashedRefreshToken: null, refreshTokenExpiresAt: null },
+        });
+        return { ok: true };
     }
 }
 
