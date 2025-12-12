@@ -109,3 +109,45 @@ model TutorVerificationRequest {
   updatedAt                   DateTime                  @updatedAt
 }
 
+
+
+model Subject{
+  id                      String                    @id @default(auto()) @map("_id") @db.ObjectId
+
+  name                    String
+  slug                    String                    @unique
+  icon                    String?
+  priority                Int                       @unique
+}
+
+
+model Level{
+  id                      String                    @id @default(auto()) @map("_id") @db.ObjectId
+
+  name                    String
+  slug                    String                    @unique
+  icon                    String?
+  priority                Int                       @unique
+}
+
+
+model Board{
+  id                      String                    @id @default(auto()) @map("_id") @db.ObjectId
+
+  name                    String
+  slug                    String                    @unique
+  icon                    String?
+  priority                Int                       @unique
+}
+
+
+
+model Language{
+  id                      String                    @id @default(auto()) @map("_id") @db.ObjectId
+
+  name                    String
+  code                    String                    @unique
+  slug                    String                    @unique
+  icon                    String?
+  priority                Int                       @unique
+}

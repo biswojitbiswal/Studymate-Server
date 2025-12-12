@@ -5,42 +5,44 @@ import { Public } from "src/common/decorator/public.decorator";
 import { SigninDto, SignupDto } from "./dtos/auth.dto";
 
 @Controller({
-    path: 'auth',
-    version: '1'
+  path: 'auth',
+  version: '1'
 })
 export class AuthController {
-    constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) { }
 
 
-    @Public()
-    @Post('signup')
-    async signup(@Body() dto: SignupDto) {
-        return await this.authService.signup(dto)
-    }
+  @Public()
+  @Post('signup')
+  async signup(@Body() dto: SignupDto) {
+    return await this.authService.signup(dto)
+  }
 
 
-    @Public()
-    @Post('signin')
-    async signin(@Body() dto: SigninDto, @Res({ passthrough: true }) res: Response) {
-        const { accessToken, refreshToken, user } = await this.authService.signin(dto);
+  @Public()
+  @Post('signin')
+  async signin(@Body() dto: SigninDto, @Res({ passthrough: true }) res: Response) {
+    const { accessToken, refreshToken, user } = await this.authService.signin(dto);
 
-        // set httpOnly refresh cookie (refreshToken is plaintext; store hashed in DB)
-        res.cookie('sm_refresh', JSON.stringify({ userId: user.id, t: refreshToken }), {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        });
+    // set httpOnly refresh cookie (refreshToken is plaintext; store hashed in DB)
+    res.cookie('sm_refresh', JSON.stringify({ userId: user.id, t: refreshToken }), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
 
-        // return access token in body (client stores in memory or localStorage temporarily)
-        return { accessToken, user };
-    }
+    // return access token in body (client stores in memory or localStorage temporarily)
+    return { accessToken, user };
+  }
 
 
 
-    @Post('refresh')
+  @Public()
+  @Post('refresh')
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+
     const cookie = req.cookies['sm_refresh'];
     if (!cookie) throw new BadRequestException('No refresh token');
 
@@ -69,6 +71,7 @@ export class AuthController {
 
 
 
+  @Public()
   @Post('signout')
   async signout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const cookie = req.cookies['sm_refresh'];
@@ -78,7 +81,7 @@ export class AuthController {
         if (parsed?.userId) {
           await this.authService.signout(parsed.userId);
         }
-      } catch {}
+      } catch { }
     }
 
     // clear cookie
@@ -89,6 +92,7 @@ export class AuthController {
 
 
   // optional profile endpoint (protected by JwtAuthGuard normally)
+  @Public()
   @Get('profile')
   async profile(@Req() req: Request) {
     // implement jwt guard in real app; for now assume you have user in request

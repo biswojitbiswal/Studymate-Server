@@ -11,7 +11,7 @@ export class SignupDto {
     email: string;
 
     @ValidateIf((o) => o.provider === AuthProvider.CREDENTIALS)
-    @IsNotEmpty()
+    @IsOptional()
     @IsPhoneNumber() // auto detects format; you can use 'IN' for India or any country
     phone?: string;
 

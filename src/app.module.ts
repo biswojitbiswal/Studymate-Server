@@ -9,6 +9,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './common/guards/auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { AuthModule } from './auth/auth.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 
 @Module({
@@ -18,7 +19,8 @@ import { AuthModule } from './auth/auth.module';
     }),
     LoggerModule,
     PrismaModule,
-    AuthModule
+    AuthModule,
+    CloudinaryModule
   ],
   providers: [
     AllExceptionsFilter,
