@@ -1,7 +1,8 @@
-import { IsInt, IsNotEmpty, IsString, Min } from "class-validator";
+import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min } from "class-validator";
 import { Type } from 'class-transformer';
+import { Status } from "@prisma/client";
 
-export class LanguageDto{
+export class LanguageDto {
     @IsString()
     @IsNotEmpty()
     name: string
@@ -11,7 +12,24 @@ export class LanguageDto{
     @Min(1)
     priority: number
 
+    @IsEnum(Status)
+    @IsOptional()
+    status?: Status
+}
+
+export class UpdateLanguageDto {
     @IsString()
-    @IsNotEmpty()
-    code: string
+    @IsOptional()
+    name?: string
+
+    @Type(() => Number)
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    priority?: number
+
+
+    @IsEnum(Status)
+    @IsOptional()
+    status?: Status
 }

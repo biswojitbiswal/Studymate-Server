@@ -170,7 +170,6 @@ model Language{
   id                      String                    @id @default(auto()) @map("_id") @db.ObjectId
 
   name                    String
-  code                    String                    @unique
   slug                    String                    @unique
   icon                    String?
   priority                Int                       @unique

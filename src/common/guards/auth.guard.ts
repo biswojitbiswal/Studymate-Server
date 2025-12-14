@@ -63,7 +63,7 @@ export class AuthGuard implements CanActivate {
         select: {
           id: true,
           email: true,
-        //   role: true,
+          role: true,
           // isActive: true,  // if you add this field later
         },
       });

@@ -1,44 +1,56 @@
-// src/common/filters/all-exception.filter.ts
 import {
   ExceptionFilter,
   Catch,
   ArgumentsHost,
   HttpException,
   HttpStatus,
-  Inject,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
-import type { Logger } from 'winston';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 
 @Catch()
-export class AllExceptionsFilter implements ExceptionFilter {
-  constructor(
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
-  ) {}
-
+export class AllExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const res = ctx.getResponse<Response>();
     const req = ctx.getRequest<Request>();
 
-    const path = req.originalUrl || req.url;
-    const method = req.method;
+    // ✅ 1. PRISMA ERRORS
+    if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      if (exception.code === 'P2002') {
+        let field = 'field';
 
-    // --- Case 1: HttpException (NotFoundException, BadRequestException, etc) ---
+        const target = exception.meta?.target;
+
+        if (Array.isArray(target) && target.length > 0) {
+          // Case: ['slug']
+          field = target[0];
+        } else if (typeof target === 'string') {
+          // Case: Board_slug_key → extract "slug"
+          const parts = target.split('_');
+          field = parts[parts.length - 2] || field;
+        }
+
+        return res.status(HttpStatus.CONFLICT).json({
+          error: 1,
+          message: `${field} already exists`,
+        });
+      }
+
+      return res.status(HttpStatus.BAD_REQUEST).json({
+        error: 1,
+        message: 'Database error',
+      });
+    }
+
+    // ✅ 2. HTTP EXCEPTIONS
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
-      const resBody = exception.getResponse();
-      const message = typeof resBody === 'string'
-        ? resBody
-        : (resBody as any).message || 'An error occurred';
-
-      this.logger.warn('HTTP exception thrown', {
-        message,
-        status,
-        path,
-        method,
-      });
+      const response = exception.getResponse();
+      const message =
+        typeof response === 'string'
+          ? response
+          : (response as any).message ?? 'An error occurred';
 
       return res.status(status).json({
         error: 1,
@@ -46,15 +58,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       });
     }
 
-    // --- Case 2: Unknown exception (programmer error, runtime crash) ---
-    const message = (exception as any)?.message || 'Internal server error';
-
-    this.logger.error('Unhandled exception', {
-      message,
-      stack: (exception as any)?.stack,
-      path,
-      method,
-    });
+    // ✅ 3. UNKNOWN ERRORS (fallback)
+    console.error('Unhandled error:', exception);
 
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       error: 1,

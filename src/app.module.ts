@@ -2,14 +2,15 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from './common/logger/logger.module';
-import { AllExceptionsFilter } from './common/filters/all-exception.filter';
+import { AllExceptionFilter } from './common/filters/all-exception.filter';
 import { MongoExceptionFilter } from './common/filters/mongo-exception.filter';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './common/guards/auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { AuthModule } from './auth/auth.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { BoardModule } from './board/board.module';
 
 
 @Module({
@@ -20,12 +21,14 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
     LoggerModule,
     PrismaModule,
     AuthModule,
-    CloudinaryModule
+    CloudinaryModule,
+    BoardModule,
   ],
   providers: [
-    AllExceptionsFilter,
-    MongoExceptionFilter,
-    PrismaExceptionFilter,
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionFilter,
+    },
     {
       provide: APP_GUARD,
       useClass: AuthGuard
@@ -36,4 +39,4 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
     }
   ]
 })
-export class AppModule {}
+export class AppModule { }

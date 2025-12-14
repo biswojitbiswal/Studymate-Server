@@ -3,7 +3,7 @@ import { CloudinaryService } from "src/cloudinary/cloudinary.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import { BoardDto, UpdateBoardDto } from "./dtos/board.dto";
 import { slugify } from "src/common/utils/slugify.util";
-import { Status } from "@prisma/client"
+import { Prisma, Status } from "@prisma/client"
 import { PaginationDto } from "src/common/dtos/pagination.dto";
 
 @Injectable({})
@@ -34,7 +34,7 @@ export class BoardService {
                 });
 
                 icon = upload.url;
-                iconPublicId = upload.publicId;
+                // iconPublicId = upload.publicId;
             }
 
             return await this.prisma.board.create({
@@ -48,7 +48,7 @@ export class BoardService {
                 },
             });
         } catch (error) {
-            throw new InternalServerErrorException(error.message);
+            throw error
         }
     }
 
@@ -91,13 +91,11 @@ export class BoardService {
             ]);
 
             return {
-                data,
-                meta: {
-                    total,
-                    page,
-                    limit,
-                    totalPages: Math.ceil(total / limit),
-                },
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+                data
             };
         } catch (error) {
             throw new InternalServerErrorException(error.message);
@@ -199,13 +197,7 @@ export class BoardService {
                 },
             });
         } catch (error) {
-            if (
-                error instanceof NotFoundException ||
-                error instanceof BadRequestException
-            ) {
-                throw error;
-            }
-            throw new InternalServerErrorException(error.message);
+            throw error
         }
     }
 
