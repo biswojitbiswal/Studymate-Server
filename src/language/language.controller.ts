@@ -1,12 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { LanguageService } from "./language.service";
-import { AuthGuard } from "@nestjs/passport";
 import { RolesGuard } from "src/common/guards/roles.guard";
 import { Roles } from "src/common/decorator/roles.decorator";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { PaginationDto } from "src/common/dtos/pagination.dto";
 import { Public } from "src/common/decorator/public.decorator";
 import { LanguageDto, UpdateLanguageDto } from "./dtos/language.dto";
+import { AuthGuard } from "src/common/guards/auth.guard";
 
 @Controller({
     path: 'language',

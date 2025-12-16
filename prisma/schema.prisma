@@ -165,7 +165,6 @@ model Board{
 }
 
 
-
 model Language{
   id                      String                    @id @default(auto()) @map("_id") @db.ObjectId
 
@@ -180,3 +179,120 @@ model Language{
 
   @@index([status])
 }
+
+
+
+
+//Task System
+enum TaskType{
+  PRIVATE
+  ASSIGNED
+}
+
+enum TaskStatus{
+  TODO
+  ONGOING
+  COMPLETED
+}
+
+enum TaskCommentType{
+  HELP_REQUEST
+  TUTOR_REPLY
+  TUTOR_REMARK
+  TUTOR_FEEDBACK
+}
+
+model ClassTask {
+  id                      String                    @id @default(auto()) @map("_id") @db.ObjectId
+
+  classId                 String                    @db.ObjectId
+  tutorId                 String                    @db.ObjectId
+
+  title                   String
+  description             String?
+  
+  dueDate                 DateTime?
+
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+
+  tasks                   Task[]                    @relation("ClassTaskToStudentTasks")
+
+  @@index([classId])
+  @@index([tutorId])
+}
+
+
+model Task{
+  id                      String                    @id @default(auto()) @map("_id") @db.ObjectId
+
+  studentId               String                    @db.ObjectId
+
+  title                   String
+  description             String?
+
+  dueDate                 DateTime?
+
+  type                    TaskType                  @default(PRIVATE)
+  status                  TaskStatus                @default(TODO)
+
+  // Only for CLASS_ASSIGNED tasks
+  classTaskId             String?                   @db.ObjectId
+  classTask               ClassTask?                @relation("ClassTaskToStudentTasks",fields: [classTaskId],references: [id])
+
+  classId                 String?                   @db.ObjectId
+  tutorId                 String?                   @db.ObjectId
+
+  // Indicates tutor override (rejected proof)
+  overriddenByTutor       Boolean                   @default(false)
+
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+
+  proofs                  TaskProof[]
+  comments                TaskComment[]
+
+  @@index([studentId])
+  @@index([classTaskId])
+  @@index([classId])
+  @@index([tutorId])
+  @@index([status])
+  @@index([type])
+  @@index([studentId, status]) // dashboard filters
+}
+
+
+model TaskProof {
+  id                      String                      @id @default(auto()) @map("_id") @db.ObjectId
+
+  taskId                  String                      @db.ObjectId
+  task                    Task                        @relation(fields: [taskId], references: [id])
+
+  studentId               String                      @db.ObjectId
+
+  fileUrl                 String
+  note                    String?
+
+  createdAt               DateTime                    @default(now())
+
+  @@index([taskId])
+}
+
+
+model TaskComment {
+  id                      String                      @id @default(auto()) @map("_id") @db.ObjectId
+
+  taskId                  String                      @db.ObjectId
+  task                    Task                        @relation(fields: [taskId], references: [id])
+
+  authorId                String                      @db.ObjectId
+
+  type                    TaskCommentType
+  message                 String
+
+  createdAt               DateTime                    @default(now())
+
+  @@index([taskId])
+  @@index([type])
+}
+

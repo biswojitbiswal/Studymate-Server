@@ -25,13 +25,19 @@ export class AuthController {
     const { accessToken, refreshToken, user } = await this.authService.signin(dto);
 
     // set httpOnly refresh cookie (refreshToken is plaintext; store hashed in DB)
-    res.cookie('sm_refresh', JSON.stringify({ userId: user.id, t: refreshToken }), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    });
+    const isProd = process.env.NODE_ENV === 'production';
+
+    res.cookie(
+      'sm_refresh',
+      JSON.stringify({ userId: user.id, t: refreshToken }),
+      {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax', // 🔑 KEY LINE
+        path: '/',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      },
+    );
 
     // return access token in body (client stores in memory or localStorage temporarily)
     return { accessToken, user };
@@ -44,7 +50,10 @@ export class AuthController {
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
 
     const cookie = req.cookies['sm_refresh'];
+    console.log("🔥 REFRESH API HIT", req.headers.cookie);
     if (!cookie) throw new BadRequestException('No refresh token');
+    console.log(cookie, "=================");
+
 
     let parsed: { userId: string; t: string };
     try {
@@ -58,13 +67,21 @@ export class AuthController {
     const { accessToken, refreshToken: newRefresh, user } = await this.authService.refreshTokens(userId, t);
 
     // rotate cookie: set new refresh (plaintext) as hashed stored in DB by service
-    res.cookie('sm_refresh', JSON.stringify({ userId: user.id, t: newRefresh }), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-    });
+    const isProd = process.env.NODE_ENV === 'production';
+
+    res.cookie(
+      'sm_refresh',
+      JSON.stringify({ userId: user.id, t: newRefresh }),
+      {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax', // 🔑 KEY LINE
+        path: '/',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      },
+    );
+
+
 
     return { accessToken, user };
   }

@@ -11,6 +11,10 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { AuthModule } from './auth/auth.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { BoardModule } from './board/board.module';
+import { LevelModule } from './level/level.module';
+import { SubjectModule } from './subject/subject.module';
+import { LanguageModule } from './language/language.module';
+import { TaskModule } from './task/task.module';
 
 
 @Module({
@@ -23,6 +27,10 @@ import { BoardModule } from './board/board.module';
     AuthModule,
     CloudinaryModule,
     BoardModule,
+    LevelModule,
+    SubjectModule,
+    LanguageModule,
+    TaskModule
   ],
   providers: [
     {

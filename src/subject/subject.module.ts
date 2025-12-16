@@ -9,4 +9,4 @@ import { CloudinaryModule } from "src/cloudinary/cloudinary.module";
     controllers: [SubjectController],
     providers: [SubjectService]
 })
-export class BoardModule{}
+export class SubjectModule{}
