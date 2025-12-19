@@ -20,59 +20,75 @@ export class AuthService {
 
             let hashedPassword: string | null = null;
 
-            if (dto.provider === AuthProvider.CREDENTIALS) {
-                if (!dto.password) {
+            if (provider === AuthProvider.CREDENTIALS) {
+                if (!password) {
                     throw new BadRequestException('Password is required');
                 }
-
-                hashedPassword = await bcrypt.hash(dto.password, 10);
+                hashedPassword = await bcrypt.hash(password, 10);
             }
-
 
             const existing = await this.prisma.user.findUnique({
-                where: { email: dto.email }
-            })
+                where: { email },
+            });
 
             if (existing) {
-                throw new ConflictException("A user with this email already exists")
+                throw new ConflictException('A user with this email already exists');
             }
 
-            if (dto.phone) {
+            if (phone) {
                 const phoneUser = await this.prisma.user.findFirst({
-                    where: { phone: dto.phone },
+                    where: { phone },
                 });
 
                 if (phoneUser) {
-                    throw new BadRequestException({
-                        message: 'Phone number already in use.',
-                    });
+                    throw new BadRequestException('Phone number already in use');
                 }
             }
 
-            const user = await this.prisma.user.create({
-                data: {
-                    name: dto.name,
-                    email: dto.email,
-                    phone: dto.phone ?? null,
-                    password: hashedPassword,
-                    role: dto.role ?? Roles.STUDENT,
-                    provider: dto.provider,
-                    isEmailVerified: true,
-                    isPhoneVerified: true,
-                },
-            });
+            // ✅ TRANSACTION START
+            const user = await this.prisma.$transaction(async (tx) => {
+                // 1️⃣ Create User
+                const createdUser = await tx.user.create({
+                    data: {
+                        name,
+                        email,
+                        phone: phone ?? null,
+                        password: hashedPassword,
+                        role: role ?? Roles.STUDENT,
+                        provider,
+                        isEmailVerified: true,
+                        isPhoneVerified: true,
+                    },
+                });
 
-            // 4. Optionally send email OTP for credentials-based signup
-            // if (dto.provider === AuthProvider.CREDENTIALS) {
-            //     // await this.sendVerificationOtp(user); // email OTP
-            // }
+                // 2️⃣ Create Role-specific document
+                if (createdUser.role === Roles.STUDENT) {
+                    await tx.student.create({
+                        data: {
+                            userId: createdUser.id,
+                        },
+                    });
+                }
+
+                if (createdUser.role === Roles.TUTOR) {
+                    await tx.tutor.create({
+                        data: {
+                            userId: createdUser.id,
+                        },
+                    });
+                }
+
+                // ❌ ADMIN → nothing extra
+                return createdUser;
+            });
 
             return user;
         } catch (error) {
             if (error instanceof HttpException) throw error;
-            throw new InternalServerErrorException("Internal server error")
+            throw new InternalServerErrorException('Internal server error');
         }
     }
+
 
 
     async signin(dto: SigninDto) {

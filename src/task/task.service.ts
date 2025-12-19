@@ -38,9 +38,15 @@ export class TaskService {
     async getAll(dto: TaskFilterDto, userId: string) {
         try {
             const { page, limit, search, status, date, range } = dto
+            console.log(dto);
+
+            const student = await this.prisma.student.findUnique({
+                where: { userId }
+            })
+            if (!student) throw new NotFoundException("Student not found");
 
             const where: any = {
-                userId,
+                studentId: student.id,
                 type: TaskType.PRIVATE,
             };
 
@@ -61,7 +67,7 @@ export class TaskService {
                     endOfTheWeek.setDate(startOfTheWeek.getDate() + 6);
                     endOfTheWeek.setHours(23, 59, 59, 999);
 
-                    dateFilter= {gte: startOfTheWeek, lte: endOfTheWeek};
+                    dateFilter = { gte: startOfTheWeek, lte: endOfTheWeek };
                 } else if (range === 'TODAY') {
                     const startOfDay = new Date(baseDate);
                     startOfDay.setHours(0, 0, 0, 0);
@@ -77,13 +83,14 @@ export class TaskService {
 
             }
 
-            if(dateFilter){
+            if (dateFilter) {
                 where.dueDate = dateFilter;
             }
 
-            if (status) {
-                where.status = status
+            if (status && status !== 'ALL') {
+                where.status = status;
             }
+
 
             if (search) {
                 where.OR = [

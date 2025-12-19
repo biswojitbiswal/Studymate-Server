@@ -61,8 +61,8 @@ export class TaskFilterDto {
     search?: string;
 
     @IsOptional()
-    @IsEnum(TaskStatus)
-    status?: TaskStatus;
+    @IsEnum(['ALL', 'TODO', 'ONGOING', 'COMPLETED'])
+    status?: 'ALL' | 'TODO' | 'ONGOING' | 'COMPLETED';
 
     
     @IsOptional()
