@@ -15,6 +15,7 @@ import { LevelModule } from './level/level.module';
 import { SubjectModule } from './subject/subject.module';
 import { LanguageModule } from './language/language.module';
 import { TaskModule } from './task/task.module';
+import { TuitionClassModule } from './tuition-class/tuition-class.module';
 
 
 @Module({
@@ -30,7 +31,8 @@ import { TaskModule } from './task/task.module';
     LevelModule,
     SubjectModule,
     LanguageModule,
-    TaskModule
+    TaskModule,
+    TuitionClassModule
   ],
   providers: [
     {

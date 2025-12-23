@@ -38,8 +38,8 @@ model User {
   hashedRefreshToken      String?
   refreshTokenExpiresAt   DateTime?
 
-  student                 Student[]
-  tutor                   Tutor[]
+  student                 Student?
+  tutor                   Tutor?
 
 
   createdAt               DateTime                  @default(now())
@@ -60,6 +60,8 @@ model Student{
   updatedAt               DateTime                  @updatedAt
 
   tasks                   Task[]
+  enrollments             ClassEnrollment[]
+  attendances             Attendance[]
 }
 
 enum TutorStatus {
@@ -89,7 +91,9 @@ model Tutor{
 
   createdAt               DateTime                  @default(now())
   updatedAt               DateTime                  @updatedAt
+
   verificationRequests    TutorVerificationRequest[]
+  classes                 TuitionClass[]
 }
 
 
@@ -132,6 +136,7 @@ model Subject{
   updatedAt               DateTime                  @updatedAt
 
   @@index([status])
+  classes                 TuitionClass[]
 }
 
 
@@ -148,6 +153,8 @@ model Level{
   updatedAt               DateTime                  @updatedAt
 
   @@index([status])
+  classes                 TuitionClass[]
+
 }
 
 
@@ -164,6 +171,8 @@ model Board{
   updatedAt               DateTime                  @updatedAt
 
   @@index([status])
+  classes                 TuitionClass[]
+
 }
 
 
@@ -180,6 +189,7 @@ model Language{
   updatedAt               DateTime                  @updatedAt
 
   @@index([status])
+  classes                 TuitionClass[]
 }
 
 
@@ -299,3 +309,232 @@ model TaskComment {
   @@index([type])
 }
 
+
+
+// Tuition Class Functionality
+enum ClassType {
+  GROUP
+  PRIVATE
+}
+
+enum ClassVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum ClassStatus{
+  DRAFT
+  PUBLISHED
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum DayOfWeek {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+}
+
+model TuitionClass{
+  id                      String                      @id @default(auto()) @map("_id") @db.ObjectId
+
+  tutorId                 String                      @db.ObjectId
+  tutor                   Tutor                       @relation(fields: [tutorId], references: [id])
+
+  boardId                 String?                     @db.ObjectId
+  subjectId               String                      @db.ObjectId
+  levelId                 String                      @db.ObjectId
+  languageId              String?                     @db.ObjectId
+
+
+  title                   String
+  seo_name                String                      @unique
+  description             String
+
+  syllabus                Json
+
+  previewImg              String?
+  previewVdo              String?
+
+  type                    ClassType                   @default(GROUP)
+  visibility              ClassVisibility             @default(PUBLIC)
+  status                  ClassStatus                 @default(DRAFT)
+
+  startDate               DateTime
+  endDate                 DateTime
+  
+  joiningStartDate        DateTime
+  joiningEndDate          DateTime
+
+  daysOfWeek              DayOfWeek[]
+  startTime               String?
+  durationMin             Int?
+  timeZone                String?
+
+  capacity                Int                         @default(1)
+
+  isPaid                  Boolean                     @default(false)
+  price                   Float?
+  currency                String?
+
+
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime                    @updatedAt
+
+  board                   Board?                      @relation(fields: [boardId], references: [id])
+  subject                 Subject                     @relation(fields: [subjectId], references: [id])
+  level                   Level                       @relation(fields: [levelId], references: [id])
+  language                Language?                   @relation(fields: [languageId], references: [id])
+  enrollments             ClassEnrollment[]
+  sessions                Session[]
+
+  @@index([tutorId])
+  @@index([type, status])
+}
+
+
+
+model ClassEnrollment {
+  id                String              @id @default(auto()) @map("_id") @db.ObjectId
+
+  classId           String              @db.ObjectId
+  studentId         String              @db.ObjectId
+
+  enrolledAt        DateTime            @default(now())
+
+  klass             TuitionClass        @relation(fields: [classId], references: [id])
+  student           Student             @relation(fields: [studentId], references: [id])
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@unique([classId, studentId])
+}
+
+
+enum SessionType{
+  REGULAR
+  EXTRA
+  DOUBT
+}
+
+enum SessionStatus{
+  PENDING_TUTOR_APPROVAL   // PRIVATE
+  SCHEDULED
+  CANCELLED_BY_TUTOR
+  CANCELLED_BY_STUDENT
+  NO_SHOW_STUDENT
+  COMPLETED
+}
+
+
+model Session {
+  id                      String           @id @default(auto()) @map("_id") @db.ObjectId
+
+  classId                 String           @db.ObjectId
+  tutorId                 String           @db.ObjectId
+  studentId               String?          @db.ObjectId
+
+  klass                   TuitionClass     @relation(fields: [classId], references: [id])
+  attendances             Attendance[]
+
+  date                    DateTime
+  startTime               String
+  durationMin             Int
+
+  sessionType             SessionType
+  status                  SessionStatus
+  createdBy               String
+  meetingLink             String?
+
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  @@index([classId])
+  @@index([tutorId])
+  @@index([studentId])
+  @@index([date])
+}
+
+
+
+enum AttendanceStatus{
+  PRESENT
+  ABSENT
+  LEAVE
+}
+
+model Attendance{
+  id                    String              @id @default(auto()) @map("_id") @db.ObjectId
+
+  sessionId             String              @db.ObjectId
+  session               Session             @relation(fields: [sessionId], references: [id])
+
+  studentId             String              @db.ObjectId
+  student               Student             @relation(fields: [studentId], references:[id])
+
+  status                AttendanceStatus
+  markedBy              String
+  markedAt              DateTime            @default(now())
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@unique([sessionId, studentId])
+  @@index([studentId])
+}
+
+
+model TutorAvailability {
+  id                    String          @id @default(auto()) @map("_id") @db.ObjectId
+
+  tutorId               String          @db.ObjectId
+ 
+  dayOfWeek             DayOfWeek
+  startTime             String    // "09:00"
+  endTime               String    // "12:00"
+  timeZone              String
+
+  isActive              Boolean         @default(true)
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@index([tutorId, dayOfWeek])
+}
+
+
+model TutorTimeOff {
+  id                String             @id @default(auto()) @map("_id") @db.ObjectId
+
+  tutorId           String             @db.ObjectId
+
+  date              DateTime  // 2025-02-10
+  startTime         String    // "10:30"
+  endTime           String    // "11:30"
+
+  reason            String?
+  createdAt         DateTime            @default(now())
+
+  @@index([tutorId, date])
+}
+
+
+model TutorLeave {
+  id                String              @id @default(auto()) @map("_id") @db.ObjectId
+
+  tutorId           String              @db.ObjectId
+
+  startDate         DateTime
+  endDate           DateTime
+
+  reason            String?
+  createdAt         DateTime            @default(now())
+
+  @@index([tutorId, startDate, endDate])
+}
