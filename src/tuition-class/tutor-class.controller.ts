@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, Query, UploadedFiles, UseGua
 import { TuitionClassService } from "./tuition-class.service";
 import { RolesGuard } from "src/common/guards/roles.guard";
 import { Roles } from "src/common/decorator/roles.decorator";
-import { CreateTuitionClassDto, TutorUpdateTuitionClassDto } from "./dtos/tuition-class.dto";
+import { CreateTuitionClassDto, TutorTuitionClassFilter, TutorUpdateTuitionClassDto } from "./dtos/tuition-class.dto";
 import { GetCurrentUserId } from "src/common/decorator/get-current-user-id.decorator";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { FileFieldsInterceptor } from "@nestjs/platform-express";
@@ -83,9 +83,9 @@ export class TutorClassController {
     @Roles('TUTOR')
     async getForTutor(
         @GetCurrentUserId() userId: string,
-        @Query('status') status?: string,
+        @Query() dto: TutorTuitionClassFilter,
     ) {
-        return this.classservice.getForTutor(userId, status);
+        return this.classservice.getForTutor(userId, dto);
     }
 
     // 6️⃣ Get class by id (tutor view)

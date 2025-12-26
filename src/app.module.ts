@@ -16,6 +16,8 @@ import { SubjectModule } from './subject/subject.module';
 import { LanguageModule } from './language/language.module';
 import { TaskModule } from './task/task.module';
 import { TuitionClassModule } from './tuition-class/tuition-class.module';
+import { SessionModule } from './session/session.module';
+import { TutorScheduleModule } from './tutor-schedule/tutor-schedule.module';
 
 
 @Module({
@@ -32,7 +34,9 @@ import { TuitionClassModule } from './tuition-class/tuition-class.module';
     SubjectModule,
     LanguageModule,
     TaskModule,
-    TuitionClassModule
+    TuitionClassModule,
+    SessionModule,
+    TutorScheduleModule
   ],
   providers: [
     {

@@ -11,6 +11,7 @@ import {
     IsMongoId,
     IsNumber,
     IsNotEmpty,
+    IsIn,
 } from 'class-validator';
 import { ClassStatus, DayOfWeek } from 'src/common/enums/tuition-class.enum';
 
@@ -215,23 +216,23 @@ export class TutorTuitionClassFilter {
     search?: string;          // title + description (+ subject name)
 
     @IsOptional()
-    @IsString()
-    status?: 'ALL' | 'DRAFT' | 'PUBLISHED' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
+    @IsEnum(ClassStatus)
+    status?: ClassStatus;
 
     @IsOptional()
-    @IsString()
-    type?: 'GROUP' | 'PRIVATE';         // GROUP | PRIVATE
+    @IsEnum(ClassType)
+    type?: ClassType;
 
     @IsOptional()
-    @IsString()
-    visibility?: 'PUBLIC' | 'PRIVATE';
+    @IsEnum(ClassVisibility)
+    visibility?: ClassVisibility;
 
     @IsOptional()
-    @IsString()
-    sortBy?: 'createdAt' | 'startDate';
+    @IsIn(['createdAt', 'startDate', 'price'])
+    sortBy?: 'createdAt' | 'startDate' | 'price';
 
     @IsOptional()
-    @IsString()
+    @IsIn(['asc', 'desc'])
     sortOrder?: 'asc' | 'desc';
 }
 

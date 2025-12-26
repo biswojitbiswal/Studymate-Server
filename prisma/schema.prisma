@@ -505,7 +505,8 @@ model TutorAvailability {
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 
-  @@index([tutorId, dayOfWeek])
+  @@index([tutorId])
+  @@index([dayOfWeek])
 }
 
 

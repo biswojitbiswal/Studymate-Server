@@ -1,11 +1,11 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UploadedFiles } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
-import { CreateTuitionClassDto, TutorUpdateTuitionClassDto } from "./dtos/tuition-class.dto";
+import { CreateTuitionClassDto, TutorTuitionClassFilter, TutorUpdateTuitionClassDto } from "./dtos/tuition-class.dto";
 import { NOTFOUND } from "dns";
 import { CloudinaryService } from "src/cloudinary/cloudinary.service";
 import { ClassStatus, ClassType } from "src/common/enums/tuition-class.enum";
 import { slugify } from "src/common/utils/slugify.util";
-import { TuitionClass } from "@prisma/client";
+import { Prisma, TuitionClass } from "@prisma/client";
 
 @Injectable({})
 export class TuitionClassService {
@@ -412,6 +412,16 @@ export class TuitionClassService {
             if (!klass) throw new NotFoundException("Class not found");
             if (klass.tutorId === tutor.id) throw new ForbiddenException("You do not own this class.")
 
+            if (klass.status === ClassStatus.ARCHIVED) {
+                throw new BadRequestException('Class is already archived');
+            }
+
+            if (klass.status === ClassStatus.DRAFT) {
+                return await this.prisma.tuitionClass.delete({
+                    where: { id: klass.id }
+                })
+            }
+
             return await this.prisma.tuitionClass.update({
                 where: { id: klass.id },
                 data: {
@@ -424,13 +434,80 @@ export class TuitionClassService {
     }
 
 
-    async getForTutor(userId: string, status?: string) {
+    async getForTutor(userId: string, dto: TutorTuitionClassFilter) {
         try {
+            const tutor = await this.prisma.tutor.findUnique({
+                where: { userId },
+                select: {
+                    id: true
+                }
+            })
+            if (!tutor) throw new NotFoundException("Tutor not found");
 
+            const page = dto.page ?? 1;
+            const limit = dto.limit ?? 10;
+            const skip = (page - 1) * limit;
+
+
+            const where: Prisma.TuitionClassWhereInput = {
+                tutorId: tutor.id
+            }
+
+            if (dto.status) {
+                where.status = dto.status
+            }
+
+            if (dto.type) {
+                where.type = dto.type
+            }
+
+            if (dto.visibility) {
+                where.visibility = dto.visibility
+            }
+
+            if (dto.search) {
+                where.OR = [
+                    {
+                        title: {
+                            contains: dto.search,
+                            mode: 'insensitive'
+                        }
+                    },
+                    {
+                        description: {
+                            contains: dto.search,
+                            mode: 'insensitive'
+                        }
+                    },
+                ]
+            }
+
+            const orderBy: Prisma.TuitionClassOrderByWithRelationInput = {
+                [dto.sortBy ?? 'createdAt']: dto.sortOrder ?? 'desc'
+            }
+
+            const [data, total] = await this.prisma.$transaction([
+                this.prisma.tuitionClass.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy
+                }),
+                this.prisma.tuitionClass.count({ where })
+            ]);
+
+            return {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+                data
+            }
         } catch (error) {
             throw error
         }
     }
+
 
     async getByIdForTutor(classId: string, userId: string) {
         try {

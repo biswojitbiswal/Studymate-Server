@@ -1,0 +1,13 @@
+Tuition Class:-
+    admin services
+    public services
+    crojob for-
+        updateClassesToActive
+        updateClassesToCompleted
+
+
+Session:- 
+    session apis
+    cronjob:-
+        create sessions for group class
+
