@@ -11,6 +11,7 @@ import { Prisma, TuitionClass } from "@prisma/client";
 export class TuitionClassService {
     constructor(private readonly prisma: PrismaService, private readonly cloudinary: CloudinaryService) { }
 
+    // TODO: We should check the overlap existing session timing when we create any class(optional)
     async create(dto: CreateTuitionClassDto, userId: string, files: {
         previewImg?: Express.Multer.File[];
         previewVdo?: Express.Multer.File[];
@@ -162,6 +163,7 @@ export class TuitionClassService {
     }
 
 
+    // TODO: We should check the overlap existing session timing when we update any class(optional)
     async updateByTutor(
         classId: string,
         dto: TutorUpdateTuitionClassDto,
