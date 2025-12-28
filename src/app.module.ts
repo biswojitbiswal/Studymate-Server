@@ -19,6 +19,7 @@ import { TuitionClassModule } from './tuition-class/tuition-class.module';
 import { SessionModule } from './session/session.module';
 import { TutorScheduleModule } from './tutor-schedule/tutor-schedule.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { MeetingModule } from './meeting/meeting.module';
 
 
 @Module({
@@ -39,6 +40,7 @@ import { AttendanceModule } from './attendance/attendance.module';
     SessionModule,
     TutorScheduleModule,
     AttendanceModule,
+    MeetingModule
   ],
   providers: [
     {

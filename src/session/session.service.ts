@@ -6,12 +6,14 @@ import { getDayFromDate } from "src/common/utils/dayofweek.util";
 import { toMinutes } from "src/common/utils/time.util";
 import { Prisma, SessionStatus, SessionType } from "@prisma/client";
 import { SessionJob } from "./session.jobs";
+import { MeetingService } from "src/meeting/meeting.service";
 
 @Injectable({})
 export class SessionService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly session: SessionJob,
+        private readonly meetingService: MeetingService
     ) { }
 
     async create(dto: CreatePrivateSessionDto, userId: string) {
@@ -526,10 +528,13 @@ export class SessionService {
                 );
             }
 
+            const meeting = this.meetingService.createMeeting(session.id);
+
             return await this.prisma.session.update({
                 where: { id: session.id },
                 data: {
-                    status: SessionStatus.SCHEDULED
+                    status: SessionStatus.SCHEDULED,
+                    meetingLink: meeting.meetingLink
                 }
             })
         } catch (error) {
@@ -920,7 +925,7 @@ export class SessionService {
                 }
             }
 
-            return await this.prisma.session.create({
+            const session = await this.prisma.session.create({
                 data: {
                     classId: klass.id,
                     tutorId: tutor.id,
@@ -933,6 +938,16 @@ export class SessionService {
                     createdBy: 'TUTOR',
                 },
             });
+
+            const meeting = this.meetingService.createMeeting(session.id);
+
+            return await this.prisma.session.update({
+                where: {id: session.id},
+                data: {
+                    meetingLink: meeting.meetingLink
+                }
+            })
+
         } catch (error) {
             throw error;
         }
@@ -1050,7 +1065,7 @@ export class SessionService {
                 }
             }
 
-            return await this.prisma.session.create({
+            const session = await this.prisma.session.create({
                 data: {
                     classId: klass.id,
                     tutorId: tutor.id,
@@ -1063,6 +1078,15 @@ export class SessionService {
                     createdBy: 'TUTOR',
                 },
             });
+
+            const meeting = this.meetingService.createMeeting(session.id);
+
+            return await this.prisma.session.update({
+                where: {id: session.id},
+                data: {
+                    meetingLink: meeting.meetingLink
+                }
+            })
         } catch (error) {
             throw error;
         }
