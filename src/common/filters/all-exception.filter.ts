@@ -21,6 +21,7 @@ export class AllExceptionFilter implements ExceptionFilter {
         let field = 'field';
 
         const target = exception.meta?.target;
+        console.log(target);
 
         if (Array.isArray(target) && target.length > 0) {
           // Case: ['slug']

@@ -1,4 +1,5 @@
 import { ClassType, ClassVisibility } from '@prisma/client';
+import { Transform, Type } from 'class-transformer';
 import {
     IsString,
     IsOptional,
@@ -21,55 +22,62 @@ export class CreateTuitionClassDto {
     // ─────────────────────────
     // Academic
     // ─────────────────────────
-    @IsMongoId()
+
+    @IsString()
     subjectId: string;
 
-    @IsMongoId()
+    @IsString()
     levelId: string;
 
     @IsOptional()
-    @IsMongoId()
+    @IsString()
     boardId?: string;
 
     @IsOptional()
-    @IsMongoId()
+    @IsString()
     languageId?: string;
 
     // ─────────────────────────
     // Basic Info
     // ─────────────────────────
+
     @IsString()
     title: string;
 
     @IsString()
     description: string;
 
+    /**
+     * Sent as JSON string from FormData
+     * Transform → real array
+     */
+    @Transform(({ value }) => {
+        if (!value) return [];
+        if (Array.isArray(value)) return value;
+
+        try {
+            return JSON.parse(value);
+        } catch {
+            throw new Error('Syllabus must be valid JSON');
+        }
+    })
     @IsArray()
-    syllabus: any[]; // structured JSON (validated at service level)
-
-    // @IsOptional()
-    // @IsString()
-    // previewImg?: string;
-
-    // @IsOptional()
-    // @IsString()
-    // previewVdo?: string;
+    syllabus: any[];
 
     // ─────────────────────────
     // Class Nature
     // ─────────────────────────
+
     @IsEnum(ClassType)
     type: ClassType;
 
     @IsEnum(ClassVisibility)
     visibility: ClassVisibility;
 
-    // @IsEnum(ClassStatus)
-    // status: ClassStatus;
-
     // ─────────────────────────
     // Duration
     // ─────────────────────────
+
     @IsDateString()
     startDate: string;
 
@@ -77,29 +85,39 @@ export class CreateTuitionClassDto {
     endDate: string;
 
     // ─────────────────────────
-    // Enrollment window (GROUP)
+    // Enrollment window
     // ─────────────────────────
-    @IsNotEmpty()
+
     @IsDateString()
     joiningStartDate: string;
 
-    @IsNotEmpty()
     @IsDateString()
     joiningEndDate: string;
 
     // ─────────────────────────
-    // Schedule Template (GROUP)
+    // Schedule (GROUP)
     // ─────────────────────────
+
+    /**
+     * daysOfWeek[] comes as:
+     * - string
+     * - or array of strings
+     */
     @IsOptional()
+    @Transform(({ value }) => {
+        if (!value) return undefined;
+        return Array.isArray(value) ? value : [value];
+    })
     @IsArray()
     @IsEnum(DayOfWeek, { each: true })
     daysOfWeek?: DayOfWeek[];
 
     @IsOptional()
     @IsString()
-    startTime?: string; // "19:00"
+    startTime?: string;
 
     @IsOptional()
+    @Transform(({ value }) => (value ? Number(value) : undefined))
     @IsInt()
     @Min(1)
     durationMin?: number;
@@ -111,15 +129,18 @@ export class CreateTuitionClassDto {
     // ─────────────────────────
     // Capacity & Pricing
     // ─────────────────────────
-    @IsNotEmpty()
+
+    @Transform(({ value }) => Number(value))
     @IsInt()
     @Min(1)
     capacity: number;
 
+    @Transform(({ value }) => value === 'true' || value === true)
     @IsBoolean()
     isPaid: boolean;
 
     @IsOptional()
+    @Transform(({ value }) => (value ? Number(value) : undefined))
     @IsNumber()
     price?: number;
 
@@ -203,26 +224,31 @@ export class TutorUpdateTuitionClassDto {
 
 
 export class TutorTuitionClassFilter {
-    @IsOptional()
     @IsInt()
+    @Type(() => Number)
+    @IsOptional()
     page?: number;
 
-    @IsOptional()
+
     @IsInt()
+    @Type(() => Number) @IsOptional()
     limit?: number;
 
     @IsOptional()
     @IsString()
     search?: string;          // title + description (+ subject name)
 
+    @Transform(({ value }) => value === '' ? undefined : value)
     @IsOptional()
     @IsEnum(ClassStatus)
     status?: ClassStatus;
 
+    @Transform(({ value }) => value === '' ? undefined : value)
     @IsOptional()
     @IsEnum(ClassType)
     type?: ClassType;
 
+    @Transform(({ value }) => value === '' ? undefined : value)
     @IsOptional()
     @IsEnum(ClassVisibility)
     visibility?: ClassVisibility;

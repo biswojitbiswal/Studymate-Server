@@ -34,6 +34,45 @@ export class TutorClassController {
         return this.classservice.create(dto, userId, files);
     }
 
+
+    // 5️⃣ Get tutor’s classes
+    @UseGuards(AuthGuard, RolesGuard)
+    @Get()
+    @Roles('TUTOR')
+    async getForTutor(
+        @GetCurrentUserId() userId: string,
+        @Query() dto: TutorTuitionClassFilter,
+    ) {
+        return this.classservice.getForTutor(userId, dto);
+    }
+
+
+
+    // 3️⃣ Publish class
+    @UseGuards(AuthGuard, RolesGuard)
+    @Patch('publish/:classId')
+    @Roles('TUTOR')
+    async publish(
+        @Param('classId') classId: string,
+        @GetCurrentUserId() userId: string,
+    ) {
+        return this.classservice.publish(classId, userId);
+    }
+
+    // 4️⃣ Archive class (soft delete)
+    @UseGuards(AuthGuard, RolesGuard)
+    @Patch('archive/:classId')
+    @Roles('TUTOR')
+    async archive(
+        @Param('classId') classId: string,
+        @GetCurrentUserId() userId: string,
+    ) {
+        console.log("Entry");
+        
+        return this.classservice.archiveByTutor(classId, userId);
+    }
+
+
     // 2️⃣ Update class (status-aware)
     @UseGuards(AuthGuard, RolesGuard)
     @Patch(':classId')
@@ -55,39 +94,7 @@ export class TutorClassController {
         return this.classservice.updateByTutor(classId, dto, userId, files);
     }
 
-    // 3️⃣ Publish class
-    @UseGuards(AuthGuard, RolesGuard)
-    @Post(':classId/publish')
-    @Roles('TUTOR')
-    async publish(
-        @Param('classId') classId: string,
-        @GetCurrentUserId() userId: string,
-    ) {
-        return this.classservice.publish(classId, userId);
-    }
-
-    // 4️⃣ Archive class (soft delete)
-    @UseGuards(AuthGuard, RolesGuard)
-    @Post(':classId/archive')
-    @Roles('TUTOR')
-    async archive(
-        @Param('classId') classId: string,
-        @GetCurrentUserId() userId: string,
-    ) {
-        return this.classservice.archiveByTutor(classId, userId);
-    }
-
-    // 5️⃣ Get tutor’s classes
-    @UseGuards(AuthGuard, RolesGuard)
-    @Get()
-    @Roles('TUTOR')
-    async getForTutor(
-        @GetCurrentUserId() userId: string,
-        @Query() dto: TutorTuitionClassFilter,
-    ) {
-        return this.classservice.getForTutor(userId, dto);
-    }
-
+    
     // 6️⃣ Get class by id (tutor view)
     @UseGuards(AuthGuard, RolesGuard)
     @Get(':classId')

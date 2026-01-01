@@ -132,7 +132,15 @@ export class TuitionClassService {
 
             return klass
         } catch (error) {
-            throw error
+            if (
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === 'P2002'
+            ) {
+                throw new BadRequestException(
+                    'Tuition class name already exists'
+                );
+            }
+            throw error;
         }
     }
 
@@ -382,7 +390,7 @@ export class TuitionClassService {
                 }
             })
             if (!klass) throw new NotFoundException("Class not found");
-            if (klass.tutorId === tutor.id) throw new ForbiddenException("You do not own this class.")
+            if (klass.tutorId !== tutor.id) throw new ForbiddenException("You do not own this class.")
             if (klass.status !== ClassStatus.DRAFT) {
                 throw new BadRequestException("You can not PUBLISH the class from your current status!")
             }
@@ -412,7 +420,7 @@ export class TuitionClassService {
                 }
             })
             if (!klass) throw new NotFoundException("Class not found");
-            if (klass.tutorId === tutor.id) throw new ForbiddenException("You do not own this class.")
+            if (klass.tutorId !== tutor.id) throw new ForbiddenException("You do not own this class.")
 
             if (klass.status === ClassStatus.ARCHIVED) {
                 throw new BadRequestException('Class is already archived');
@@ -545,7 +553,7 @@ export class TuitionClassService {
                 }
             })
             if (!klass) throw new NotFoundException("Class not found");
-            if (klass.tutorId === tutor.id) throw new ForbiddenException("You do not own this class.")
+            if (klass.tutorId !== tutor.id) throw new ForbiddenException("You do not own this class.")
 
             return klass;
         } catch (error) {
