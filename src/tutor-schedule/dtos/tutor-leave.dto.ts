@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import { IsDateString, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateTutorLeaveDto {
@@ -16,11 +17,15 @@ export class CreateTutorLeaveDto {
 export class TutorLeaveFilterDto {
     @IsOptional()
     @IsInt()
+    @Type(() => Number)
+
     @Min(1)
     page?: number;
 
     @IsOptional()
     @IsInt()
+    @Type(() => Number)
+
     @Min(1)
     limit?: number;
 

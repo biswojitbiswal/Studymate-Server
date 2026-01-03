@@ -158,7 +158,17 @@ export class TutorUpdateTuitionClassDto {
     @IsOptional() @IsString()
     description?: string;
 
-    @IsOptional() @IsArray()
+    @Transform(({ value }) => {
+        if (!value) return [];
+        if (Array.isArray(value)) return value;
+
+        try {
+            return JSON.parse(value);
+        } catch {
+            throw new Error('Syllabus must be valid JSON');
+        }
+    })
+    @IsArray()
     syllabus?: any[];
 
     @IsOptional() @IsString()
@@ -176,21 +186,30 @@ export class TutorUpdateTuitionClassDto {
 
 
     @IsOptional()
+    @Transform(({ value }) => {
+        if (!value) return undefined;
+        return Array.isArray(value) ? value : [value];
+    })
     @IsArray()
     @IsEnum(DayOfWeek, { each: true })
     daysOfWeek?: DayOfWeek[];
 
     // ───────── Pricing & Structure (DRAFT only)
-    @IsOptional() @IsBoolean()
+    @Transform(({ value }) => value === 'true' || value === true)
+    @IsBoolean()
     isPaid?: boolean;
 
-    @IsOptional() @IsNumber()
+    @IsOptional()
+    @Transform(({ value }) => (value ? Number(value) : undefined))
+    @IsNumber()
     price?: number;
 
     @IsOptional() @IsString()
     currency?: string;
 
-    @IsOptional() @IsInt() @Min(1)
+    @Transform(({ value }) => Number(value))
+    @IsInt()
+    @Min(1)
     capacity?: number;
 
     @IsOptional()
@@ -212,6 +231,7 @@ export class TutorUpdateTuitionClassDto {
     startTime?: string; // "19:00"
 
     @IsOptional()
+    @Transform(({ value }) => (value ? Number(value) : undefined))
     @IsInt()
     @Min(1)
     durationMin?: number;

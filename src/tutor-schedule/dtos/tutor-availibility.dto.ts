@@ -1,5 +1,6 @@
 import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Matches, Min } from 'class-validator';
 import { DayOfWeek } from '@prisma/client';
+import { Type } from 'class-transformer';
 
 export class CreateTutorAvailabilityDto {
   @IsEnum(DayOfWeek)
@@ -43,16 +44,17 @@ export class UpdateTutorAvailabilityDto {
 export class TutorAvailabilityFilterDto {
   // ───────── Pagination ─────────
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   page?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   limit?: number;
 
-  // ───────── Filters ─────────
   @IsOptional()
   @IsEnum(DayOfWeek)
   dayOfWeek?: DayOfWeek;
@@ -62,6 +64,7 @@ export class TutorAvailabilityFilterDto {
   timeZone?: string;
 
   @IsOptional()
+  @Type(() => Boolean)
   isActive?: boolean;
 
   // ───────── Sorting ─────────

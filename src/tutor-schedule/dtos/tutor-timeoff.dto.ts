@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import { IsDateString, IsInt, IsOptional, IsString, Matches, Min } from 'class-validator';
 
 export class CreateTutorTimeOffDto {
@@ -22,11 +23,13 @@ export class TutorTimeOffFilterDto {
   // ───────── Pagination ─────────
   @IsOptional()
   @IsInt()
+  @Type(() => Number)
   @Min(1)
   page?: number;
 
   @IsOptional()
   @IsInt()
+  @Type(() => Number)
   @Min(1)
   limit?: number;
 
