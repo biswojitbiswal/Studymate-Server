@@ -197,6 +197,7 @@ export class TutorUpdateTuitionClassDto {
     // ───────── Pricing & Structure (DRAFT only)
     @Transform(({ value }) => value === 'true' || value === true)
     @IsBoolean()
+    @IsOptional()
     isPaid?: boolean;
 
     @IsOptional()
@@ -208,6 +209,8 @@ export class TutorUpdateTuitionClassDto {
     currency?: string;
 
     @Transform(({ value }) => Number(value))
+    @Type(() => Number)
+    @IsOptional()
     @IsInt()
     @Min(1)
     capacity?: number;
@@ -280,6 +283,41 @@ export class TutorTuitionClassFilter {
     @IsOptional()
     @IsIn(['asc', 'desc'])
     sortOrder?: 'asc' | 'desc';
+}
+
+
+export class AdminTuitionClassFilter{
+    @IsOptional()
+    @IsString()
+    tutorId?: string
+
+    @IsOptional()
+    @IsEnum(ClassStatus)
+    status?: ClassStatus
+
+    @IsOptional()
+    @IsEnum(ClassType)
+    type: ClassType
+
+    @Transform(({ value }) => value === '' ? undefined : value)
+    @IsOptional()
+    @IsEnum(ClassVisibility)
+    visibility?: ClassVisibility;
+
+    @IsInt()
+    @Type(() => Number)
+    @IsOptional()
+    page?: number;
+
+
+    @IsInt()
+    @Type(() => Number)
+    @IsOptional()
+    limit?: number;
+
+    @IsOptional()
+    @IsString()
+    search?: string;
 }
 
 

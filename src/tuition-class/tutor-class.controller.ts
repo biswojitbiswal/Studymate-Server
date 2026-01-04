@@ -31,7 +31,7 @@ export class TutorClassController {
             previewVdo?: Express.Multer.File[];
         },
     ) {
-        return this.classservice.create(dto, userId, files);
+        return await this.classservice.create(dto, userId, files);
     }
 
 
@@ -43,7 +43,7 @@ export class TutorClassController {
         @GetCurrentUserId() userId: string,
         @Query() dto: TutorTuitionClassFilter,
     ) {
-        return this.classservice.getForTutor(userId, dto);
+        return await this.classservice.getForTutor(userId, dto);
     }
 
 
@@ -56,7 +56,9 @@ export class TutorClassController {
         @Param('classId') classId: string,
         @GetCurrentUserId() userId: string,
     ) {
-        return this.classservice.publish(classId, userId);
+        console.log('entry');
+        
+        return await this.classservice.publish(classId, userId);
     }
 
     // 4️⃣ Archive class (soft delete)
@@ -69,7 +71,7 @@ export class TutorClassController {
     ) {
         console.log("Entry");
         
-        return this.classservice.archiveByTutor(classId, userId);
+        return await this.classservice.archiveByTutor(classId, userId);
     }
 
 
@@ -91,19 +93,19 @@ export class TutorClassController {
             previewVdo?: Express.Multer.File[];
         },
     ) {
-        return this.classservice.updateByTutor(classId, dto, userId, files);
+        return await this.classservice.updateByTutor(classId, dto, userId, files);
     }
 
     
     // 6️⃣ Get class by id (tutor view)
     @UseGuards(AuthGuard, RolesGuard)
     @Get(':classId')
-    @Roles('TUTOR')
+    @Roles('TUTOR','ADMIN')
     async getById(
         @Param('classId') classId: string,
         @GetCurrentUserId() userId: string,
     ) {
-        return this.classservice.getByIdForTutor(classId, userId);
+        return await this.classservice.getById(classId, userId);
     }
 }
 

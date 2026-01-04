@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UploadedFiles } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
-import { CreateTuitionClassDto, TutorTuitionClassFilter, TutorUpdateTuitionClassDto } from "./dtos/tuition-class.dto";
+import { AdminTuitionClassFilter, CreateTuitionClassDto, TutorTuitionClassFilter, TutorUpdateTuitionClassDto } from "./dtos/tuition-class.dto";
 import { NOTFOUND } from "dns";
 import { CloudinaryService } from "src/cloudinary/cloudinary.service";
 import { ClassStatus, ClassType } from "src/common/enums/tuition-class.enum";
@@ -519,13 +519,24 @@ export class TuitionClassService {
     }
 
 
-    async getByIdForTutor(classId: string, userId: string) {
+    async getById(classId: string, userId: string) {
         try {
             const tutor = await this.prisma.tutor.findUnique({ where: { userId } });
-            if (!tutor) throw new NotFoundException("Tutor not found");
+            // if (!tutor) throw new NotFoundException("Tutor not found");
             const klass = await this.prisma.tuitionClass.findUnique({
                 where: { id: classId },
                 include: {
+                    tutor: {
+                        select: {
+                            id: true,
+                            user: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                }
+                            }
+                        }
+                    },
                     subject: {
                         select: {
                             id: true,
@@ -553,9 +564,124 @@ export class TuitionClassService {
                 }
             })
             if (!klass) throw new NotFoundException("Class not found");
-            if (klass.tutorId !== tutor.id) throw new ForbiddenException("You do not own this class.")
+            if (tutor) {
+                if (klass.tutorId !== tutor.id) throw new ForbiddenException("You do not own this class.")
+            }
 
             return klass;
+        } catch (error) {
+            throw error
+        }
+    }
+
+
+    async getAllForAdmin(dto: AdminTuitionClassFilter) {
+        try {
+            const page = dto.page ?? 1;
+            const limit = dto.limit ?? 10;
+            const skip = (page - 1) * limit;
+
+
+            const where: Prisma.TuitionClassWhereInput = {}
+
+            if (dto.status) {
+                where.status = dto.status
+            }
+
+            if (dto.type) {
+                where.type = dto.type
+            }
+
+            if (dto.visibility) {
+                where.visibility = dto.visibility
+            }
+
+            if (dto.search) {
+                where.OR = [
+                    {
+                        title: {
+                            contains: dto.search,
+                            mode: 'insensitive'
+                        }
+                    },
+                    {
+                        description: {
+                            contains: dto.search,
+                            mode: 'insensitive'
+                        }
+                    },
+                ]
+            }
+
+            const [data, total] = await this.prisma.$transaction([
+                this.prisma.tuitionClass.findMany({
+                    where,
+                    include: {
+                        tutor: {
+                            select: {
+                                id: true,
+                                user: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        email: true,
+                                        phone: true
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    skip,
+                    take: limit,
+                    orderBy: { createdAt: 'desc' }
+                }),
+                this.prisma.tuitionClass.count({ where })
+            ]);
+
+            return {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+                data
+            }
+        } catch (error) {
+            throw error
+        }
+    }
+
+
+    async archiveByAdmin(classId: string, adminId: string) {
+        try {
+            const user = await this.prisma.user.findUnique({ where: { id: adminId } });
+            if (!user) throw new NotFoundException("User not found");
+            if (user.role !== 'ADMIN') throw new ForbiddenException("You have not permission for this action")
+            const klass = await this.prisma.tuitionClass.findUnique({
+                where: { id: classId },
+                select: {
+                    id: true,
+                    tutorId: true,
+                    status: true
+                }
+            })
+            if (!klass) throw new NotFoundException("Class not found");
+
+            if (klass.status === ClassStatus.ARCHIVED) {
+                throw new BadRequestException('Class is already archived');
+            }
+
+            if (klass.status === ClassStatus.DRAFT) {
+                return await this.prisma.tuitionClass.delete({
+                    where: { id: klass.id }
+                })
+            }
+
+            return await this.prisma.tuitionClass.update({
+                where: { id: klass.id },
+                data: {
+                    status: ClassStatus.ARCHIVED
+                }
+            })
         } catch (error) {
             throw error
         }

@@ -1,5 +1,10 @@
-import { Controller } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Query, UseGuards } from "@nestjs/common";
 import { TuitionClassService } from "./tuition-class.service";
+import { AdminTuitionClassFilter, AdminUpdateTuitionClassDto } from "./dtos/tuition-class.dto";
+import { GetCurrentUserId } from "src/common/decorator/get-current-user-id.decorator";
+import { RolesGuard } from "src/common/guards/roles.guard";
+import { Roles } from "src/common/decorator/roles.decorator";
+import { AuthGuard } from "src/common/guards/auth.guard";
 
 @Controller({
     path: "admin/classes",
@@ -10,45 +15,24 @@ export class AdminClassController {
 
 
     // 9️⃣ Get all classes (admin)
-    // @Get()
-    // async getAll(
-    //     @Query('status') status ?: string,
-    //     @Query('tutorId') tutorId ?: string,
-    //     @Query('type') type ?: string,
-    // ) {
-    //     return this.tuitionClass.getAllForAdmin({
-    //         status,
-    //         tutorId,
-    //         type,
-    //     });
-    // }
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles('ADMIN')
+    @Get()
+    async getAll(
+        @Query() dto: AdminTuitionClassFilter
+    ) {
+        return this.classservice.getAllForAdmin(dto);
+    }
 
-    // // 🔟 Update class by admin
-    // @Patch(':classId')
-    // async update(
-    //     @Param('classId') classId: string,
-    //     @Body() dto: AdminUpdateTuitionClassDto,
-    //     @GetCurrentUserId() adminId: string,
-    // ) {
-    //     return this.tuitionClass.updateByAdmin(classId, dto, adminId);
-    // }
 
-    // // 1️⃣1️⃣ Archive class (admin)
-    // @Post(':classId/archive')
-    // async archive(
-    //     @Param('classId') classId: string,
-    //     @GetCurrentUserId() adminId: string,
-    // ) {
-    //     return this.tuitionClass.archiveByAdmin(classId, adminId);
-    // }
-
-    // // 1️⃣2️⃣ Force delete class (admin only)
-    // @Delete(':classId')
-    // async forceDelete(
-    //     @Param('classId') classId: string,
-    //     @Body('reason') reason: string,
-    //     @GetCurrentUserId() adminId: string,
-    // ) {
-    //     return this.tuitionClass.forceDelete(classId, reason, adminId);
-    // }
+    // 1️⃣1️⃣ Archive class (admin)
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles('ADMIN')
+    @Patch('archive/:classId')
+    async archive(
+        @Param('classId') classId: string,
+        @GetCurrentUserId() adminId: string,
+    ) {
+        return await this.classservice.archiveByAdmin(classId, adminId);
+    }
 }

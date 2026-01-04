@@ -20,6 +20,8 @@ import { SessionModule } from './session/session.module';
 import { TutorScheduleModule } from './tutor-schedule/tutor-schedule.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { MeetingModule } from './meeting/meeting.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { CronModule } from './cron-job/cron-job.module';
 
 
 @Module({
@@ -27,6 +29,8 @@ import { MeetingModule } from './meeting/meeting.module';
     ConfigModule.forRoot({
       isGlobal: true, // makes .env available everywhere
     }),
+    ScheduleModule.forRoot(),
+    CronModule,
     LoggerModule,
     PrismaModule,
     AuthModule,
