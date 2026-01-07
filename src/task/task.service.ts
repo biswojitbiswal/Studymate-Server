@@ -12,6 +12,8 @@ export class TaskService {
 
     async create(dto: TaskDto, userId: string) {
         try {
+            console.log(userId);
+            
             const student = await this.prisma.student.findUnique({
                 where: { userId }
             })

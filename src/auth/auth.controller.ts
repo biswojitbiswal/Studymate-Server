@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Res, Req, Get, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, Res, Req, Get, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import type { Response, Request } from 'express';
 import { AuthService } from "./auth.service";
 import { Public } from "src/common/decorator/public.decorator";
@@ -51,7 +51,7 @@ export class AuthController {
 
     const cookie = req.cookies['sm_refresh'];
     console.log("🔥 REFRESH API HIT", req.headers.cookie);
-    if (!cookie) throw new BadRequestException('No refresh token');
+    if (!cookie) throw new UnauthorizedException('No refresh token');
     console.log(cookie, "=================");
 
 

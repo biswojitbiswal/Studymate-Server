@@ -1,4 +1,3 @@
-import { ClassType, ClassVisibility } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
     IsString,
@@ -14,7 +13,7 @@ import {
     IsNotEmpty,
     IsIn,
 } from 'class-validator';
-import { ClassStatus, DayOfWeek } from 'src/common/enums/tuition-class.enum';
+import { ClassStatus, DayOfWeek, ClassType, ClassVisibility } from 'src/common/enums/tuition-class.enum';
 
 
 
@@ -286,7 +285,7 @@ export class TutorTuitionClassFilter {
 }
 
 
-export class AdminTuitionClassFilter{
+export class AdminTuitionClassFilter {
     @IsOptional()
     @IsString()
     tutorId?: string
@@ -387,4 +386,91 @@ export class AdminUpdateTuitionClassDto {
     @IsOptional()
     @IsDateString()
     joiningEndDate?: string;
+}
+
+
+
+export class BrowseClassFilterDto {
+    @IsOptional()
+    @IsArray()
+    @IsMongoId({ each: true })
+    subjectIds?: string[];
+
+    @IsOptional()
+    @IsArray()
+    @IsMongoId({ each: true })
+    levelIds?: string[];
+
+    @IsOptional()
+    @IsArray()
+    @IsMongoId({ each: true })
+    boardIds?: string[];
+
+    @IsOptional()
+    @IsArray()
+    @IsMongoId({ each: true })
+    languageIds?: string[];
+
+    @IsOptional()
+    @Type(() => Boolean)
+    @IsBoolean()
+    paid?: boolean; // true = paid, false = free
+
+    /* ---------- Price ---------- */
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(0)
+    minPrice?: number;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(0)
+    maxPrice?: number;
+
+    /* ---------- Rating ---------- */
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    minRating?: number; // 3, 4, 4.5 handled in query logic
+
+    /* ---------- Class Type ---------- */
+
+    @IsOptional()
+    @IsEnum(ClassType)
+    type?: ClassType;
+
+    /* ---------- Search ---------- */
+
+    @IsOptional()
+    @IsString()
+    search?: string;
+
+    /* ---------- Sorting ---------- */
+
+    @IsOptional()
+    @IsIn(['createdAt', 'startDate', 'price'])
+    sortBy?: 'createdAt' | 'startDate' | 'price';
+
+    @IsOptional()
+    @IsIn(['asc', 'desc'])
+    sortOrder?: 'asc' | 'desc';
+
+    /* ---------- Pagination ---------- */
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    page?: number;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    limit?: number;
 }

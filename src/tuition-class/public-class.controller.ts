@@ -1,5 +1,6 @@
-import { Controller } from "@nestjs/common";
+import { Controller, Get, Param, Query } from "@nestjs/common";
 import { TuitionClassService } from "./tuition-class.service";
+import { BrowseClassFilterDto } from "./dtos/tuition-class.dto";
 
 @Controller({
     path: "public/classes",
@@ -9,26 +10,14 @@ export class PublicClassController {
     constructor(private readonly classservice: TuitionClassService) { }
 
     // 7️⃣ Browse classes
-    // @Get('browse')
-    // async browse(
-    //     @Query('subjectId') subjectId ?: string,
-    //     @Query('levelId') levelId ?: string,
-    //     @Query('type') type ?: string,
-    //     @Query('price') price ?: 'free' | 'paid',
-    //     @Query('search') search ?: string,
-    // ) {
-    //     return this.tuitionClass.browse({
-    //         subjectId,
-    //         levelId,
-    //         type,
-    //         price,
-    //         search,
-    //     });
-    // }
+    @Get('browse')
+    async browse(@Query() dto: BrowseClassFilterDto) {
+        return await this.classservice.browse(dto);
+    }
 
     // // 8️⃣ Get public class by id
-    // @Get(':classId')
-    // async getPublicById(@Param('classId') classId: string) {
-    //     return this.tuitionClass.getPublicById(classId);
-    // }
+    @Get(':classId')
+    async getPublicById(@Param('classId') classId: string) {
+        return await this.classservice.getPublicById(classId);
+    }
 }

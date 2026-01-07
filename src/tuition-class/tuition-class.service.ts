@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UploadedFiles } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
-import { AdminTuitionClassFilter, CreateTuitionClassDto, TutorTuitionClassFilter, TutorUpdateTuitionClassDto } from "./dtos/tuition-class.dto";
+import { AdminTuitionClassFilter, BrowseClassFilterDto, CreateTuitionClassDto, TutorTuitionClassFilter, TutorUpdateTuitionClassDto } from "./dtos/tuition-class.dto";
 import { NOTFOUND } from "dns";
 import { CloudinaryService } from "src/cloudinary/cloudinary.service";
 import { ClassStatus, ClassType } from "src/common/enums/tuition-class.enum";
@@ -684,6 +684,116 @@ export class TuitionClassService {
             })
         } catch (error) {
             throw error
+        }
+    }
+
+
+    async browse(dto: BrowseClassFilterDto) {
+        try {
+            const page = dto.page ? dto.page : 1;
+            const limit = dto.limit ? dto.limit : 10;
+            const skip = (page - 1) * limit;
+
+            const where: Prisma.TuitionClassWhereInput = {
+                status: 'PUBLISHED',
+            };
+
+            if (dto.type) {
+                where.type = dto.type;
+            }
+
+            if (dto.search) {
+                where.OR = [
+                    { title: { contains: dto.search, mode: 'insensitive' } },
+                    { description: { contains: dto.search, mode: 'insensitive' } },
+                ];
+            }
+
+            if (dto.subjectIds?.length) {
+                where.subjectId = { in: dto.subjectIds };
+            };
+
+            if (dto.levelIds?.length) {
+                where.levelId = { in: dto.levelIds };
+            };
+
+            if (dto.languageIds?.length) {
+                where.languageId = { in: dto.languageIds };
+            };
+
+            if (dto.boardIds?.length) {
+                where.boardId = { in: dto.boardIds };
+            }
+
+            if (dto.paid) {
+                where.isPaid = dto.paid
+            }
+
+            if (dto.maxPrice !== undefined) {
+                where.price = { lte: dto.maxPrice };
+            }
+
+            // if (dto.minRating !== undefined) {
+            //     where.rating = { gte: dto.minRating };
+            // }
+
+            let orderBy: Prisma.TuitionClassOrderByWithRelationInput = {
+                createdAt: 'desc',
+            };
+
+            if (dto.sortBy) {
+                orderBy = {
+                    [dto.sortBy]: dto.sortOrder ?? 'desc',
+                };
+            }
+
+            /* ---------- Query ---------- */
+            const [items, total] = await Promise.all([
+                this.prisma.tuitionClass.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy,
+                    include: {
+                        tutor: {
+                            select: {
+                                id: true,
+                                user: {
+                                    select: {
+                                        id: true,
+                                        name: true
+                                    }
+                                }
+                            },
+                        },
+                        subject: true,
+                        level: true,
+                    },
+                }),
+
+                this.prisma.tuitionClass.count({ where }),
+            ]);
+
+            return {
+                data: {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit),
+                    items
+                },
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+
+    async getPublicById(classId: string) {
+        try {
+
+        } catch (error) {
+            throw error;
         }
     }
 }
