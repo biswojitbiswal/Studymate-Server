@@ -1,5 +1,5 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength, IsEnum, IsPhoneNumber, ValidateIf } from 'class-validator';
-import { Roles, AuthProvider } from '@prisma/client';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength, IsEnum, IsPhoneNumber, ValidateIf, IsBoolean } from 'class-validator';
+import { Roles, AuthProvider, SignupIntent } from '@prisma/client';
 
 export class SignupDto {
     @IsNotEmpty()
@@ -25,8 +25,8 @@ export class SignupDto {
     provider: AuthProvider; // 'CREDENTIALS' | 'GOOGLE' | 'APPLE'
 
     @IsOptional() // default role is STUDENT → so role is optional
-    @IsEnum(Roles, { message: 'Role must be STUDENT or TUTOR' })
-    role?: Roles;
+    @IsEnum(SignupIntent, { message: 'Signup Intent must be STUDENT or TUTOR' })
+    signupIntent?: SignupIntent;
 }
 
 
@@ -39,7 +39,35 @@ export class SigninDto {
     @IsString()
     password: string;
 
-    @IsNotEmpty() // default role is STUDENT → so role is optional
-    @IsEnum(Roles)
-    role: Roles;
+
+    @IsBoolean()
+    @IsNotEmpty()
+    rememberMe: boolean
+
+    // @IsNotEmpty() // default role is STUDENT → so role is optional
+    // @IsEnum(Roles)
+    // role: Roles;
+}
+
+
+export class ChangePasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  oldPassword: string;
+
+  @IsString()
+  @IsNotEmpty()
+  newPassword: string;
+}
+
+export class ForgotDto {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+}
+
+export class ResetForgotPasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  newPassword: string;
 }

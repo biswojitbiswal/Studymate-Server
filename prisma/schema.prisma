@@ -21,6 +21,13 @@ enum AuthProvider {
   APPLE
 }
 
+
+enum SignupIntent {
+  STUDENT
+  TUTOR
+}
+
+
 model User {
   id                      String                    @id @default(auto()) @map("_id") @db.ObjectId
   name                    String?
@@ -29,6 +36,9 @@ model User {
   password                String?
   avatar                  String?
   role                    Roles                     @default(STUDENT)
+
+  signupIntent            SignupIntent              @default(STUDENT)
+
 
   provider                AuthProvider              @default(CREDENTIALS)
 
@@ -52,9 +62,11 @@ model Student{
   user                    User                      @relation(fields: [userId], references: [id])
   userId                  String                    @unique @db.ObjectId
 
-  classGrade              String?
+  level                   String?
   board                   String?
-  stream                  String?
+  subjects                String[]                  @default([])
+  preferedLanguage        String?
+  goals                   String[]                  @default([])
 
   createdAt               DateTime                  @default(now())
   updatedAt               DateTime                  @updatedAt
@@ -79,41 +91,24 @@ model Tutor{
   user                    User                      @relation(fields: [userId], references: [id])
   userId                  String                    @unique @db.ObjectId
 
-  shortTitle              String?
-  subjects                String[]
+  title                   String?
+  subjects                String[]                  @default([])
   levels                  String[]
-  yearsOfExp              Int?
+  yearsOfExp              Float?
   bio                     String?
-  qualification           String?
-  links                   String[]
-  isVerified              Boolean                   @default(false)
+  qualification           String[]
+  demoLinks               String[]
   tutorStatus             TutorStatus               @default(NOT_APPLIED)
+
+  rating                  Int                       @default(0)
+  totalStudents           Int                       @default(0)
 
   createdAt               DateTime                  @default(now())
   updatedAt               DateTime                  @updatedAt
 
-  verificationRequests    TutorVerificationRequest[]
   classes                 TuitionClass[]
 }
 
-
-enum VerificationStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-model TutorVerificationRequest {
-  id                          String                    @id @default(auto()) @map("_id") @db.ObjectId
-  tutorId                     String                    @db.ObjectId
-  tutor                       Tutor                     @relation(fields: [tutorId], references: [id])
-  status                      VerificationStatus        @default(PENDING)
-  adminId                     String?                   @db.ObjectId
-  adminNote                   String?
-  documents                   String[]
-  createdAt                   DateTime                  @default(now())
-  updatedAt                   DateTime                  @updatedAt
-}
 
 
 enum Status {

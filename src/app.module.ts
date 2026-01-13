@@ -22,6 +22,9 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { MeetingModule } from './meeting/meeting.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CronModule } from './cron-job/cron-job.module';
+import { EmailModule } from './mail/mail.module';
+import { StudentModule } from './student/student.module';
+import { TutorModule } from './tutor/tutor.module';
 
 
 @Module({
@@ -44,7 +47,10 @@ import { CronModule } from './cron-job/cron-job.module';
     SessionModule,
     TutorScheduleModule,
     AttendanceModule,
-    MeetingModule
+    MeetingModule,
+    EmailModule,
+    StudentModule,
+    TutorModule
   ],
   providers: [
     {

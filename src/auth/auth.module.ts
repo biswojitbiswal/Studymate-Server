@@ -4,6 +4,7 @@ import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtModule } from "@nestjs/jwt";
 import { JwtStrategy } from "./dtos/jwt.strategy";
+import { EmailModule } from "src/mail/mail.module";
 
 @Module({
     imports: [
@@ -11,7 +12,8 @@ import { JwtStrategy } from "./dtos/jwt.strategy";
             secret: process.env.JWT_SECRET || 'supersecretkey',
             signOptions: { expiresIn: '7d' }, // token expiry 
         }),
-        PrismaModule
+        PrismaModule,
+        EmailModule
     ],
     controllers: [AuthController],
     providers: [AuthService, JwtStrategy]

@@ -1,8 +1,10 @@
-import { Controller, Post, Body, Res, Req, Get, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, Res, Req, Get, BadRequestException, UnauthorizedException, Param, Query, Patch, UseGuards } from '@nestjs/common';
 import type { Response, Request } from 'express';
 import { AuthService } from "./auth.service";
 import { Public } from "src/common/decorator/public.decorator";
-import { SigninDto, SignupDto } from "./dtos/auth.dto";
+import { ChangePasswordDto, ForgotDto, ResetForgotPasswordDto, SigninDto, SignupDto } from "./dtos/auth.dto";
+import { AuthGuard } from 'src/common/guards/auth.guard';
+import { GetCurrentUserId } from 'src/common/decorator/get-current-user-id.decorator';
 
 @Controller({
   path: 'auth',
@@ -16,6 +18,13 @@ export class AuthController {
   @Post('signup')
   async signup(@Body() dto: SignupDto) {
     return await this.authService.signup(dto)
+  }
+
+
+  @Public()
+  @Post('verify-email/:token')
+  async emailverification(@Param() token: string) {
+    return await this.authService.emailverification(token)
   }
 
 
@@ -107,13 +116,30 @@ export class AuthController {
   }
 
 
-
-  // optional profile endpoint (protected by JwtAuthGuard normally)
   @Public()
-  @Get('profile')
-  async profile(@Req() req: Request) {
-    // implement jwt guard in real app; for now assume you have user in request
-    // or fetch user by id from token payload
-    return { user: req['user'] || null };
+  @Post('forgot-password')
+  async forgotpassword(@Body() dto: ForgotDto) {
+    return await this.authService.forgotPassword(dto.email)
   }
+
+
+  @Public()
+  @Post('reset-password')
+  async resetPassword(
+    @Query('token') token: string,
+    @Body() dto: ResetForgotPasswordDto,
+  ) {
+    return await this.authService.resetPassword(dto, token)
+  }
+
+
+  @UseGuards(AuthGuard)
+  @Patch('change-password')
+  async changePassword(
+    @GetCurrentUserId() userId: string,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return await this.authService.changePassword(userId, dto)
+  }
+
 }

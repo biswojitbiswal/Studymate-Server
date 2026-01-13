@@ -791,7 +791,67 @@ export class TuitionClassService {
 
     async getPublicById(classId: string) {
         try {
+            const klass = await this.prisma.tuitionClass.findUnique({
+                where: {id: classId},
+                select: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    previewImg: true,
+                    previewVdo: true,
+                    price: true,
+                    capacity: true,
+                    type: true,
+                    joiningStartDate: true,
+                    joiningEndDate: true,
+                    startDate: true,
+                    endDate: true,
+                    startTime: true,
+                    durationMin: true,
+                    isPaid: true,
+                    tutor: {
+                        select: {
+                            id: true,
+                            user: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    avatar: true
+                                }
+                            }
+                        }
+                    },
+                    subject: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    },
+                    board: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    },
+                    level: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    },
+                    language: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    }
+                }
+            })
 
+            return {
+                message: "Class retrived successfully",
+                data: klass
+            }
         } catch (error) {
             throw error;
         }
