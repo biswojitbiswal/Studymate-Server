@@ -80,8 +80,8 @@ async function bootstrap() {
   // // register filters in order (most specific -> general)
   // app.useGlobalFilters(prismaFilter, mongoFilter, allFilter);
   await app.listen(process.env.PORT ?? 3000);
-  winstonLogger.info(`Studymate is running at ${process.env.PORT ?? 3000}`);
-  console.log(`Studymate is running at ${process.env.PORT ?? 3000}`);
+  winstonLogger.info(`StudyNest is running at ${process.env.PORT ?? 3000}`);
+  console.log(`StudyNest is running at ${process.env.PORT ?? 3000}`);
 
 }
 bootstrap();

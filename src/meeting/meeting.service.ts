@@ -34,6 +34,6 @@ export class MeetingService {
   }
 
   private buildRoomName(sessionId: string): string {
-    return `studymate-session-${sessionId}`;
+    return `studynest-session-${sessionId}`;
   }
 }

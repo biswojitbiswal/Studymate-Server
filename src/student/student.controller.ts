@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { StudentService } from "./student.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { GetCurrentUserId } from "src/common/decorator/get-current-user-id.decorator";
@@ -6,6 +6,7 @@ import { RolesGuard } from "src/common/guards/roles.guard";
 import { Roles } from "src/common/decorator/roles.decorator";
 import { StudentDto } from "./dtos/student.dto";
 import { PaginationDto } from "src/common/dtos/pagination.dto";
+import { FileInterceptor } from "@nestjs/platform-express";
 
 @Controller({
     path: 'student',
@@ -25,9 +26,10 @@ export class StudentController{
 
     @UseGuards(AuthGuard, RolesGuard)
     @Roles('STUDENT')
+    @UseInterceptors(FileInterceptor('avatar'))
     @Patch('me')
-    async profileUpdate(@GetCurrentUserId() userId: string, @Body() dto: StudentDto){
-        return await this.studentService.profileUpdate(userId, dto)
+    async profileUpdate(@GetCurrentUserId() userId: string, @Body() dto: StudentDto, @UploadedFile() file?: Express.Multer.File){
+        return await this.studentService.profileUpdate(userId, dto, file)
     }
 
 

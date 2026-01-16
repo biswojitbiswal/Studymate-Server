@@ -4,7 +4,7 @@ import { CreateMeetingInput, MeetingProvider, MeetingResult } from "../meeting.t
 @Injectable()
 export class JitsiProvider {
   async create(input: CreateMeetingInput): Promise<MeetingResult> {
-    const roomName = `studymate-session-${input.sessionId}`;
+    const roomName = `StudyNest-session-${input.sessionId}`;
 
     return {
       meetingLink: `https://meet.jit.si/${roomName}`,

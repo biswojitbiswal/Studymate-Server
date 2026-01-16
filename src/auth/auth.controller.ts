@@ -5,6 +5,8 @@ import { Public } from "src/common/decorator/public.decorator";
 import { ChangePasswordDto, ForgotDto, ResetForgotPasswordDto, SigninDto, SignupDto } from "./dtos/auth.dto";
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { GetCurrentUserId } from 'src/common/decorator/get-current-user-id.decorator';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { Roles } from 'src/common/decorator/roles.decorator';
 
 @Controller({
   path: 'auth',
@@ -142,4 +144,13 @@ export class AuthController {
     return await this.authService.changePassword(userId, dto)
   }
 
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Patch('toggle/:userId')
+  async toggle(
+    @Param('userId') userId: string,
+  ) {
+    return await this.authService.toggle(userId)
+  }
 }

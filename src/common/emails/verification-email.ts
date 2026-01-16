@@ -44,7 +44,7 @@ export function verificationEmailHtml(verifyUrl: string) {
                 "
               >
                 <h1 style="margin: 0; font-size: 22px">
-                  StudyMate
+                  StudyNest
                 </h1>
                 <p style="margin: 6px 0 0; font-size: 14px; opacity: 0.9">
                   Learn better. Together.
@@ -73,7 +73,7 @@ export function verificationEmailHtml(verifyUrl: string) {
                     line-height: 1.6;
                   "
                 >
-                  Thanks for signing up for <strong>StudyMate</strong> 🎉  
+                  Thanks for signing up for <strong>StudyNest</strong> 🎉  
                   Please confirm your email address to activate your account and
                   continue your learning journey.
                 </p>
@@ -105,7 +105,7 @@ export function verificationEmailHtml(verifyUrl: string) {
                     line-height: 1.6;
                   "
                 >
-                  If you didn’t create a StudyMate account, you can safely ignore
+                  If you didn’t create a StudyNest account, you can safely ignore
                   this email.
                 </p>
 
@@ -133,7 +133,7 @@ export function verificationEmailHtml(verifyUrl: string) {
                   color: #64748b;
                 "
               >
-                © 2026 StudyMate. All rights reserved.
+                © 2026 StudyNest. All rights reserved.
               </td>
             </tr>
           </table>

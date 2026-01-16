@@ -44,7 +44,7 @@ export function forgotPasswordEmailHtml(name: string, verifyUrl: string) {
                 "
               >
                 <h1 style="margin: 0; font-size: 22px">
-                  StudyMate
+                  StudyNest
                 </h1>
                 <p style="margin: 6px 0 0; font-size: 14px; opacity: 0.9">
                   Secure Account Access
@@ -84,7 +84,7 @@ export function forgotPasswordEmailHtml(name: string, verifyUrl: string) {
                     line-height: 1.6;
                   "
                 >
-                  We received a request to reset your StudyMate account password.
+                  We received a request to reset your StudyNest account password.
                   Click the button below to set a new password.
                 </p>
 
@@ -143,7 +143,7 @@ export function forgotPasswordEmailHtml(name: string, verifyUrl: string) {
                   color: #64748b;
                 "
               >
-                © 2026 StudyMate. All rights reserved.
+                © 2026 StudyNest. All rights reserved.
               </td>
             </tr>
           </table>

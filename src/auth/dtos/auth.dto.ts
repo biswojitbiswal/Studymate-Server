@@ -41,8 +41,8 @@ export class SigninDto {
 
 
     @IsBoolean()
-    @IsNotEmpty()
-    rememberMe: boolean
+    @IsOptional()
+    rememberMe?: boolean
 
     // @IsNotEmpty() // default role is STUDENT → so role is optional
     // @IsEnum(Roles)

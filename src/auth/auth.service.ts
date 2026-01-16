@@ -397,5 +397,33 @@ export class AuthService {
             throw new InternalServerErrorException('Internal server error');
         }
     }
+
+
+    async toggle(userId: string) {
+        try {
+            const user = await this.prisma.user.findUnique({
+                where: { id: userId }
+            });
+
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
+
+            const newStatus = !user.isActive;
+
+            await this.prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    isActive: newStatus
+                }
+            });
+
+            return {
+                message: `User ${newStatus ? 'ACTIVATED' : 'DEACTIVATED'} successfully`
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
