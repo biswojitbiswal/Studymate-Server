@@ -4,6 +4,22 @@ import { PrismaService } from "src/prisma/prisma.service";
 import { StudentDto } from "./dtos/student.dto";
 import { Prisma } from "@prisma/client";
 
+
+function isStudentProfileCompleted(student: {
+    levelId?: string | null;
+    boardId?: string | null;
+    preferredLanguageId?: string | null;
+    studentSubjects?: { subjectId: string }[];
+}) {
+    return Boolean(
+        student.levelId &&
+        student.boardId &&
+        student.preferredLanguageId &&
+        student.studentSubjects &&
+        student.studentSubjects.length > 0
+    );
+}
+
 @Injectable({})
 export class StudentService {
     constructor(private readonly prisma: PrismaService) { }
@@ -230,6 +246,20 @@ export class StudentService {
                     });
                 }
             }
+
+            /* ---- Re-fetch updated student ---- */
+            const updatedStudent = await tx.student.findUnique({
+                where: { id: student.id },
+                include: { studentSubjects: true },
+            });
+
+            /* ---- Profile completion check ---- */
+            const profileCompleted = isStudentProfileCompleted(updatedStudent!);
+
+            await tx.user.update({
+                where: { id: student.user.id },
+                data: { profileCompleted },
+            });
         });
 
         return {

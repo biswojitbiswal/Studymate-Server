@@ -45,6 +45,7 @@ model User {
   isEmailVerified         Boolean                   @default(false)
 
   isActive                Boolean                   @default(true)
+  profileCompleted        Boolean                   @default(false)
 
   hashedRefreshToken      String?
   refreshTokenExpiresAt   DateTime?

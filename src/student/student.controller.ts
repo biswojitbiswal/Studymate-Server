@@ -29,6 +29,8 @@ export class StudentController{
     @UseInterceptors(FileInterceptor('avatar'))
     @Patch('me')
     async profileUpdate(@GetCurrentUserId() userId: string, @Body() dto: StudentDto, @UploadedFile() file?: Express.Multer.File){
+        console.log(dto, file);
+        
         return await this.studentService.profileUpdate(userId, dto, file)
     }
 

@@ -4,6 +4,33 @@ import { PaginationDto } from "src/common/dtos/pagination.dto";
 import { PrismaService } from "src/prisma/prisma.service";
 import { TutorApplyDto, TutorProfileUpdateDto } from "./dtos/tutor.dto";
 
+
+function isTutorProfileCompleted(tutor: {
+    title?: string | null;
+    bio?: string | null;
+    yearsOfExp?: number | null;
+    qualification?: string[];
+    demoLinks?: string[];
+    tutorSubjects?: { subjectId: string }[];
+    tutorLevels?: { levelId: string }[];
+}) {
+    return Boolean(
+        tutor.title &&
+        tutor.bio &&
+        tutor.yearsOfExp !== null &&
+        tutor.yearsOfExp !== undefined &&
+        tutor.qualification &&
+        tutor.qualification.length > 0 &&
+        tutor.demoLinks &&
+        tutor.demoLinks.length > 0 &&
+        tutor.tutorSubjects &&
+        tutor.tutorSubjects.length > 0 &&
+        tutor.tutorLevels &&
+        tutor.tutorLevels.length > 0
+    );
+}
+
+
 @Injectable({})
 export class TutorService {
     constructor(private readonly prisma: PrismaService) { }
@@ -246,6 +273,24 @@ export class TutorService {
                     data: dto.levelIds.map((id) => ({ tutorId: tutor.id, levelId: id })),
                 });
             }
+
+            /* ---------- Re-fetch updated tutor ---------- */
+            const updatedTutor = await tx.tutor.findUnique({
+                where: { id: tutor.id },
+                include: {
+                    tutorSubjects: true,
+                    tutorLevels: true,
+                },
+            });
+
+            const profileCompleted = updatedTutor
+                ? isTutorProfileCompleted(updatedTutor)
+                : false;
+
+            await tx.user.update({
+                where: { id: tutor.user.id },
+                data: { profileCompleted },
+            });
         });
 
         return { message: 'Tutor profile updated successfully' };

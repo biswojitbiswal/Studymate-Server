@@ -25,7 +25,7 @@ export class AuthController {
 
   @Public()
   @Post('verify-email/:token')
-  async emailverification(@Param() token: string) {
+  async emailverification(@Param('token') token: string) {
     return await this.authService.emailverification(token)
   }
 

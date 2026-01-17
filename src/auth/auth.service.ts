@@ -124,10 +124,11 @@ export class AuthService {
         const html = verificationEmailHtml(verifyUrl)
 
         // 🔔 resend verification email here
-        await this.email.sendEmail(user.email, "Verify Your Email", html);
-
+        const res = await this.email.sendEmail(user.email, "Verify Your Email", html);
+        
         return {
             message: 'Signup successful. Please verify your email.',
+            data: user
         };
     }
 
@@ -138,7 +139,7 @@ export class AuthService {
                 secret: process.env.JWT_SECRET
             })
             if (!decode || !decode.id) throw new BadRequestException("Invalid or Expired token");
-
+            
             const user = await this.prisma.user.findUnique({
                 where: { id: decode.id }
             })
@@ -213,6 +214,8 @@ export class AuthService {
                     role: user.role,
                     avatar: user.avatar,
                     provider: user.provider,
+                    signupIntent: user.signupIntent,
+                    profileCompleted: user.profileCompleted
                 },
             };
         } catch (error) {
