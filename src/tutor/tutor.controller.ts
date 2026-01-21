@@ -16,15 +16,19 @@ export class TutorController {
     constructor(private readonly tutorService: TutorService) { }
 
 
-    @UseGuards(AuthGuard, RolesGuard)
-    @Roles('STUDENT')
+    @UseInterceptors(FileInterceptor('avatar'))
     @Post('apply')
-    async tutorApply(@GetCurrentUserId() userId: string, @Body() dto: TutorApplyDto) {
-        return await this.tutorService.tutorApply(userId, dto)
+    async tutorApply(
+        @GetCurrentUserId() userId: string,
+        @Body() dto: TutorApplyDto,
+        @UploadedFile() file: Express.Multer.File
+    ) {
+        return await this.tutorService.tutorApply(userId, dto, file);
     }
 
 
-    
+
+
     @UseGuards(AuthGuard, RolesGuard)
     @Roles('ADMIN')
     @Get()
@@ -34,7 +38,7 @@ export class TutorController {
 
 
     @UseGuards(AuthGuard, RolesGuard)
-    @Roles('TUTOR')
+    @Roles('TUTOR', 'STUDENT')
     @Get('me')
     async me(@GetCurrentUserId() userId: string) {
         return await this.tutorService.me(userId)

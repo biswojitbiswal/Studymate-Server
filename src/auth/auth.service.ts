@@ -171,7 +171,9 @@ export class AuthService {
 
     async signin(dto: SigninDto) {
         try {
-            const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+            const user = await this.prisma.user.findUnique({ 
+                where: { email: dto.email } 
+            });
             if (!user) throw new NotFoundException('User not found');
 
             if (user.provider !== AuthProvider.CREDENTIALS) {
@@ -180,6 +182,10 @@ export class AuthService {
 
             if (!user.isEmailVerified) {
                 throw new BadRequestException('Please complete verification');
+            }
+
+            if (!user.isActive) {
+                throw new BadRequestException('Your account is inactive, Please contact admin.');
             }
 
             if (!user.password) {
@@ -211,6 +217,7 @@ export class AuthService {
                     id: user.id,
                     name: user.name,
                     email: user.email,
+                    phone: user.phone,
                     role: user.role,
                     avatar: user.avatar,
                     provider: user.provider,
@@ -219,6 +226,8 @@ export class AuthService {
                 },
             };
         } catch (error) {
+            console.log(error);
+            
             if (error instanceof HttpException) throw error;
             throw new InternalServerErrorException('Internal server error');
         }

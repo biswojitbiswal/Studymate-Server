@@ -86,7 +86,6 @@ model Student{
 }
 
 enum TutorStatus {
-  NOT_APPLIED      // just signed up as tutor but hasn't filled form yet
   PENDING_REVIEW   // form submitted, waiting for admin
   APPROVED         // verified tutor
   REJECTED         // rejected, can re-apply

@@ -9,26 +9,34 @@ import {
   ArrayNotEmpty,
   IsUrl,
   IsEmail,
+  IsNotEmpty,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class TutorApplyDto {
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
   @Transform(({ value }) => value?.trim())
-  title?: string;
+  title: string;
 
   @IsArray()
   @ArrayNotEmpty()
-  @IsMongoId({ each: true })
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map(String) : [String(value)]
+  )
+  @IsString({ each: true })
   subjectIds: string[];
 
   @IsArray()
   @ArrayNotEmpty()
-  @IsMongoId({ each: true })
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map(String) : [String(value)]
+  )
+  @IsString({ each: true })
   levelIds: string[];
 
   @IsOptional()
+  @Transform(({ value }) => Number(value))
   @IsNumber()
   @Min(0)
   @Max(60)
@@ -41,14 +49,21 @@ export class TutorApplyDto {
 
   @IsOptional()
   @IsArray()
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map(String) : [String(value)]
+  )
   @IsString({ each: true })
   qualification?: string[];
 
   @IsOptional()
   @IsArray()
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map(String) : [String(value)]
+  )
   @IsUrl({}, { each: true })
   demoLinks?: string[];
 }
+
 
 
 
@@ -73,6 +88,11 @@ export class TutorProfileUpdateDto {
 
 
   @IsOptional()
+  @Transform(({ value }) =>
+    value === "" || value === null || value === undefined
+      ? undefined
+      : Number(value)
+  )
   @IsNumber()
   @Min(0)
   @Max(60)
@@ -95,11 +115,17 @@ export class TutorProfileUpdateDto {
 
   @IsOptional()
   @IsArray()
-  @IsMongoId({ each: true })
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map((v) => String(v)) : []
+  )
+  @IsString({ each: true })
   subjectIds?: string[];
 
   @IsOptional()
   @IsArray()
-  @IsMongoId({ each: true })
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map((v) => String(v)) : []
+  )
+  @IsString({ each: true })
   levelIds?: string[];
 }

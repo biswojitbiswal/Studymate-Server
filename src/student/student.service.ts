@@ -3,6 +3,7 @@ import { PaginationDto } from "src/common/dtos/pagination.dto";
 import { PrismaService } from "src/prisma/prisma.service";
 import { StudentDto } from "./dtos/student.dto";
 import { Prisma } from "@prisma/client";
+import { CloudinaryService } from "src/cloudinary/cloudinary.service";
 
 
 function isStudentProfileCompleted(student: {
@@ -22,7 +23,10 @@ function isStudentProfileCompleted(student: {
 
 @Injectable({})
 export class StudentService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly cloudinary: CloudinaryService
+    ) { }
 
 
     async me(userId: string) {
@@ -31,7 +35,7 @@ export class StudentService {
                 where: { userId },
                 include: {
                     user: true,
-                    // studentSubjects: true
+                    studentSubjects: true
                 }
             })
             if (!student) throw new NotFoundException("Student not found");
@@ -178,9 +182,17 @@ export class StudentService {
             throw new NotFoundException('Student not found');
         }
 
-        let avatar: string | undefined;
+        let avatar: string | null = null;
         if (file) {
-            avatar = file.filename;
+            if (!file.mimetype.startsWith('image/')) {
+                throw new BadRequestException('Only image files are allowed');
+            }
+
+            const upload = await this.cloudinary.uploadFile(file.buffer, {
+                folder: 'studymate/student',
+            });
+
+            avatar = upload.url;
         }
 
         const userUpdateData: any = {};

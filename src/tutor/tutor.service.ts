@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { PaginationDto } from "src/common/dtos/pagination.dto";
 import { PrismaService } from "src/prisma/prisma.service";
 import { TutorApplyDto, TutorProfileUpdateDto } from "./dtos/tutor.dto";
+import { CloudinaryService } from "src/cloudinary/cloudinary.service";
 
 
 function isTutorProfileCompleted(tutor: {
@@ -33,38 +34,61 @@ function isTutorProfileCompleted(tutor: {
 
 @Injectable({})
 export class TutorService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly cloudinary: CloudinaryService
+    ) { }
 
 
-    async tutorApply(userId: string, dto: TutorApplyDto) {
-        try {
-            const user = await this.prisma.user.findUnique({
-                where: { id: userId },
+    async tutorApply(
+        userId: string,
+        dto: TutorApplyDto,
+        file: Express.Multer.File,
+    ) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            throw new NotFoundException("User not found");
+        }
+
+        const existingTutor = await this.prisma.tutor.findUnique({
+            where: { userId },
+            include: {
+                tutorSubjects: true,
+                tutorLevels: true,
+            },
+        });
+
+        // ❌ Approved tutors cannot edit
+        if (existingTutor?.tutorStatus === "APPROVED") {
+            throw new BadRequestException(
+                "Approved tutors cannot modify their application",
+            );
+        }
+
+        /* ---------------- AVATAR ---------------- */
+        let avatar: string | undefined;
+
+        if (file) {
+            if (!file.mimetype.startsWith("image/")) {
+                throw new BadRequestException("Only image files are allowed");
+            }
+
+            const upload = await this.cloudinary.uploadFile(file.buffer, {
+                folder: "studynest/tutor",
             });
 
-            if (!user) {
-                throw new NotFoundException('User not found');
-            }
+            avatar = upload.url;
+        }
 
-            if (user.role !== 'STUDENT') {
-                throw new BadRequestException('Only students can apply as tutor');
-            }
+        /* ---------------- TRANSACTION ---------------- */
+        await this.prisma.$transaction(async (tx) => {
+            let tutorId: string;
 
-            const existingTutor = await this.prisma.tutor.findUnique({
-                where: { userId },
-            });
-
-            if (existingTutor) {
-                if (existingTutor.tutorStatus === 'PENDING_REVIEW') {
-                    throw new BadRequestException('Tutor application already under review');
-                }
-
-                if (existingTutor.tutorStatus === 'APPROVED') {
-                    throw new BadRequestException('You are already an approved tutor');
-                }
-            }
-
-            await this.prisma.$transaction(async (tx) => {
+            // ✅ CREATE
+            if (!existingTutor) {
                 const tutor = await tx.tutor.create({
                     data: {
                         userId,
@@ -73,34 +97,69 @@ export class TutorService {
                         bio: dto.bio,
                         qualification: dto.qualification ?? [],
                         demoLinks: dto.demoLinks ?? [],
-                        tutorStatus: 'PENDING_REVIEW',
+                        tutorStatus: "PENDING_REVIEW",
                     },
                 });
 
-                // Tutor ↔ Subjects
-                await tx.tutorSubject.createMany({
-                    data: dto.subjectIds.map((subjectId) => ({
-                        tutorId: tutor.id,
-                        subjectId,
-                    })),
+                tutorId = tutor.id;
+            }
+            // ✅ UPDATE (PENDING / REJECTED)
+            else {
+                const tutor = await tx.tutor.update({
+                    where: { id: existingTutor.id },
+                    data: {
+                        title: dto.title,
+                        yearsOfExp: dto.yearsOfExp,
+                        bio: dto.bio,
+                        qualification: dto.qualification ?? [],
+                        demoLinks: dto.demoLinks ?? [],
+                        tutorStatus: "PENDING_REVIEW", // reset status
+                        updatedAt: new Date(),
+                    },
                 });
 
-                // Tutor ↔ Levels
-                await tx.tutorLevel.createMany({
-                    data: dto.levelIds.map((levelId) => ({
-                        tutorId: tutor.id,
-                        levelId,
-                    })),
+                tutorId = tutor.id;
+
+                // 🔁 Clear old relations
+                await tx.tutorSubject.deleteMany({
+                    where: { tutorId },
                 });
+
+                await tx.tutorLevel.deleteMany({
+                    where: { tutorId },
+                });
+            }
+
+            // 🔗 Re-create subjects
+            await tx.tutorSubject.createMany({
+                data: dto.subjectIds.map((subjectId) => ({
+                    tutorId,
+                    subjectId,
+                })),
             });
 
-            return {
-                message: 'Tutor application submitted successfully. Waiting for admin approval.',
-            };
-        } catch (error) {
-            throw error;
-        }
+            // 🔗 Re-create levels
+            await tx.tutorLevel.createMany({
+                data: dto.levelIds.map((levelId) => ({
+                    tutorId,
+                    levelId,
+                })),
+            });
+
+            // 🖼 Update avatar only if uploaded
+            if (avatar) {
+                await tx.user.update({
+                    where: { id: userId },
+                    data: { avatar },
+                });
+            }
+        });
+
+        return {
+            message: "Tutor application submitted successfully and sent for review",
+        };
     }
+
 
 
 
@@ -222,6 +281,8 @@ export class TutorService {
         dto: TutorProfileUpdateDto,
         file?: Express.Multer.File,
     ) {
+        console.log(dto);
+        
         const tutor = await this.prisma.tutor.findUnique({
             where: { userId },
             include: { user: true },
@@ -235,7 +296,18 @@ export class TutorService {
         if (dto.name) userUpdate.name = dto.name;
         if (dto.phone) userUpdate.phone = dto.phone;
 
-        if (file) userUpdate.avatar = file.filename;
+        let avatar: string | null = null;
+        if (file) {
+            if (!file.mimetype.startsWith('image/')) {
+                throw new BadRequestException('Only image files are allowed');
+            }
+
+            const upload = await this.cloudinary.uploadFile(file.buffer, {
+                folder: 'studymate/student',
+            });
+
+            avatar = upload.url;
+        }
 
         if (dto.email && dto.email !== tutor.user.email) {
             const exists = await this.prisma.user.findFirst({
@@ -252,6 +324,9 @@ export class TutorService {
         if (dto.yearsOfExp !== undefined) tutorUpdate.yearsOfExp = dto.yearsOfExp;
         if (dto.qualification) tutorUpdate.qualification = dto.qualification;
         if (dto.demoLinks) tutorUpdate.demoLinks = dto.demoLinks;
+        if (avatar) {
+            tutorUpdate.avatar = avatar;
+        }
 
         await this.prisma.$transaction(async (tx) => {
             if (Object.keys(userUpdate).length)
