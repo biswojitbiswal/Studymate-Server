@@ -46,6 +46,14 @@ export class TutorController {
 
 
     @UseGuards(AuthGuard, RolesGuard)
+    @Roles('ADMIN')
+    @Get('requests')
+    async tutorRequest(@Query() dto: PaginationDto) {
+        return await this.tutorService.tutorRequest(dto)
+    }
+
+
+    @UseGuards(AuthGuard, RolesGuard)
     @Roles('TUTOR')
     @UseInterceptors(FileInterceptor('avatar'))
     @Patch('me')
@@ -59,6 +67,14 @@ export class TutorController {
     @Patch('approved/:id')
     async toggleApproved(@Param('id') id: string) {
         return await this.tutorService.toggleApproved(id)
+    }
+
+
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles('ADMIN')
+    @Patch('rejected/:id')
+    async toggleRejected(@Param('id') id: string) {
+        return await this.tutorService.toggleRejected(id)
     }
 
 

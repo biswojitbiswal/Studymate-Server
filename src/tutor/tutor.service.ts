@@ -1,9 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { Prisma, Roles, SignupIntent, TutorStatus } from "@prisma/client";
 import { PaginationDto } from "src/common/dtos/pagination.dto";
 import { PrismaService } from "src/prisma/prisma.service";
 import { TutorApplyDto, TutorProfileUpdateDto } from "./dtos/tutor.dto";
 import { CloudinaryService } from "src/cloudinary/cloudinary.service";
+import { title } from "process";
 
 
 function isTutorProfileCompleted(tutor: {
@@ -195,25 +196,32 @@ export class TutorService {
 
 
 
-    async getAll(dto: PaginationDto & { search?: string }) {
-        const page = dto.page && dto.page > 0 ? dto.page : 1;
-        const limit = dto.limit && dto.limit > 0 ? dto.limit : 10;
-        const skip = (page - 1) * limit;
-        const search = dto.search?.trim();
+    async getAll(dto: PaginationDto) {
+        try {
+            const page = dto.page && dto.page > 0 ? dto.page : 1;
+            const limit = dto.limit && dto.limit > 0 ? dto.limit : 10;
+            const skip = (page - 1) * limit;
+            const search = dto.search?.trim();
 
-        const where: Prisma.TutorWhereInput = search
-            ? {
-                OR: [
+            const where: Prisma.TutorWhereInput = {
+                tutorStatus: { not: TutorStatus.PENDING_REVIEW },
+                user: {
+                    role: Roles.TUTOR,
+                    signupIntent: SignupIntent.TUTOR
+                }
+            }
+
+            if (search) {
+                where.OR = [
                     {
                         user: {
-                            is: {
-                                name: {
-                                    contains: search,
-                                    mode: Prisma.QueryMode.insensitive,
-                                },
+                            name: {
+                                contains: search,
+                                mode: Prisma.QueryMode.insensitive,
                             },
                         },
                     },
+
                     {
                         tutorSubjects: {
                             some: {
@@ -226,54 +234,169 @@ export class TutorService {
                             },
                         },
                     },
-                ],
+                ];
             }
-            : {};
 
-        const [tutors, total] = await this.prisma.$transaction([
-            this.prisma.tutor.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { createdAt: 'desc' },
-                include: {
-                    user: {
-                        select: { name: true, email: true, avatar: true },
-                    },
-                    tutorSubjects: {
-                        select: {
-                            subject: { select: { name: true } },
+            const [tutors, total] = await this.prisma.$transaction([
+                this.prisma.tutor.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        user: true,
+                        tutorSubjects: {
+                            select: {
+                                subject: { select: { name: true } },
+                            },
+                        },
+                        tutorLevels: {
+                            select: {
+                                level: { select: { name: true } },
+                            },
                         },
                     },
-                    tutorLevels: {
-                        select: {
-                            level: { select: { name: true } },
-                        },
-                    },
-                },
-            }),
-            this.prisma.tutor.count({ where }),
-        ]);
+                }),
+                this.prisma.tutor.count({ where }),
+            ]);
 
-        return {
-            data: tutors.map((t) => ({
-                id: t.id,
-                name: t.user.name,
-                email: t.user.email,
-                avatar: t.user.avatar,
-                subjects: t.tutorSubjects.map((s) => s.subject.name),
-                levels: t.tutorLevels.map((l) => l.level.name),
-                status: t.tutorStatus,
-            })),
-            meta: {
+            return {
                 total,
                 page,
                 limit,
                 totalPages: Math.ceil(total / limit),
-            },
-        };
+                data: tutors.map((t) => ({
+                    id: t.id,
+                    userId: t.user.id,
+                    name: t.user.name,
+                    email: t.user.email,
+                    phone: t.user.phone,
+                    avatar: t.user.avatar,
+                    role: t.user.role,
+                    signupIntent: t.user.signupIntent,
+                    isActive: t.user.isActive,
+                    isEmailVerified: t.user.isEmailVerified,
+                    profileCompleted: t.user.profileCompleted,
+                    provider: t.user.provider,
+                    createdAt: t.user.createdAt,
+                    title: t.title,
+                    bio: t.bio,
+                    yearsOfExp: t.yearsOfExp,
+                    qualification: t.qualification,
+                    demoLinks: t.demoLinks,
+                    subjects: t.tutorSubjects.map((s) => s.subject.name),
+                    levels: t.tutorLevels.map((l) => l.level.name),
+                    tutorStatus: t.tutorStatus,
+                    rating: t.rating,
+                    totalStudents: t.totalStudents,
+                })),
+            };
+        } catch (error) {
+            throw error;
+        }
     }
 
+
+
+    async tutorRequest(dto: PaginationDto) {
+        try {
+            const page = dto.page && dto.page > 0 ? dto.page : 1;
+            const limit = dto.limit && dto.limit > 0 ? dto.limit : 10;
+            const skip = (page - 1) * limit;
+            const search = dto.search?.trim();
+
+            const where: Prisma.TutorWhereInput = {
+                tutorStatus: TutorStatus.PENDING_REVIEW,
+                user: {
+                    role: Roles.STUDENT,
+                    signupIntent: SignupIntent.TUTOR
+                }
+            }
+
+            if (search) {
+                where.OR = [
+                    {
+                        user: {
+                            name: {
+                                contains: search,
+                                mode: Prisma.QueryMode.insensitive,
+                            },
+                        },
+                    },
+
+                    {
+                        tutorSubjects: {
+                            some: {
+                                subject: {
+                                    name: {
+                                        contains: search,
+                                        mode: Prisma.QueryMode.insensitive,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ];
+            }
+
+            const [tutors, total] = await this.prisma.$transaction([
+                this.prisma.tutor.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        user: true,
+                        tutorSubjects: {
+                            select: {
+                                subject: { select: { name: true } },
+                            },
+                        },
+                        tutorLevels: {
+                            select: {
+                                level: { select: { name: true } },
+                            },
+                        },
+                    },
+                }),
+                this.prisma.tutor.count({ where }),
+            ]);
+
+            return {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+                data: tutors.map((t) => ({
+                    id: t.id,
+                    userId: t.user.id,
+                    name: t.user.name,
+                    email: t.user.email,
+                    phone: t.user.phone,
+                    avatar: t.user.avatar,
+                    role: t.user.role,
+                    signupIntent: t.user.signupIntent,
+                    isActive: t.user.isActive,
+                    isEmailVerified: t.user.isEmailVerified,
+                    profileCompleted: t.user.profileCompleted,
+                    provider: t.user.provider,
+                    createdAt: t.user.createdAt,
+                    title: t.title,
+                    bio: t.bio,
+                    yearsOfExp: t.yearsOfExp,
+                    qualification: t.qualification,
+                    demoLinks: t.demoLinks,
+                    subjects: t.tutorSubjects.map((s) => s.subject.name),
+                    levels: t.tutorLevels.map((l) => l.level.name),
+                    tutorStatus: t.tutorStatus,
+                    rating: t.rating,
+                    totalStudents: t.totalStudents,
+                })),
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
 
 
     async profileUpdate(
@@ -282,7 +405,7 @@ export class TutorService {
         file?: Express.Multer.File,
     ) {
         console.log(dto);
-        
+
         const tutor = await this.prisma.tutor.findUnique({
             where: { userId },
             include: { user: true },
@@ -431,57 +554,38 @@ export class TutorService {
     }
 
 
-    // async toggleApprove(tutorId: string) {
-    //     const tutor = await this.prisma.tutor.findUnique({
-    //         where: { id: tutorId },
-    //         include: { user: true },
-    //     });
+    async toggleRejected(tutorId: string) {
+        try {
+            const tutor = await this.prisma.tutor.findUnique({
+                where: { id: tutorId },
+                include: { user: true },
+            });
 
-    //     if (!tutor) {
-    //         throw new NotFoundException('Tutor not found');
-    //     }
+            if (!tutor) {
+                throw new NotFoundException('Tutor not found');
+            }
 
-    //     // ❌ Do not allow toggle for these states
-    //     if (tutor.tutorStatus === 'REJECTED') {
-    //         throw new BadRequestException(
-    //             'Rejected tutor must re-apply to be approved again',
-    //         );
-    //     }
+            if (tutor.tutorStatus === 'APPROVED') {
+                throw new BadRequestException('Tutor already approved');
+            }
 
-    //     if (tutor.tutorStatus === 'SUSPENDED') {
-    //         throw new BadRequestException(
-    //             'Suspended tutor cannot be toggled. Use suspend/unsuspend instead.',
-    //         );
-    //     }
+            await this.prisma.$transaction(async (tx) => {
+                // 1️⃣ Update tutor status
+                await tx.tutor.update({
+                    where: { id: tutorId },
+                    data: {
+                        tutorStatus: 'REJECTED',
+                    },
+                });
+            });
 
-    //     // Determine next state
-    //     const isApproving = tutor.tutorStatus !== 'APPROVED';
-
-    //     await this.prisma.$transaction(async (tx) => {
-    //         // 1️⃣ Update tutor status
-    //         await tx.tutor.update({
-    //             where: { id: tutorId },
-    //             data: {
-    //                 tutorStatus: isApproving ? 'APPROVED' : 'PENDING_REVIEW',
-    //             },
-    //         });
-
-    //         // 2️⃣ Update user role
-    //         await tx.user.update({
-    //             where: { id: tutor.userId },
-    //             data: {
-    //                 role: isApproving ? 'TUTOR' : 'STUDENT',
-    //             },
-    //         });
-    //     });
-
-    //     return {
-    //         message: isApproving
-    //             ? 'Tutor approved successfully'
-    //             : 'Tutor approval revoked successfully',
-    //         status: isApproving ? 'APPROVED' : 'PENDING_REVIEW',
-    //     };
-    // }
+            return {
+                message: 'Tutor rejected successfully',
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
 
 
 }

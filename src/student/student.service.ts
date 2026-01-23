@@ -102,16 +102,8 @@ export class StudentService {
                 skip,
                 take: limit,
                 orderBy: { createdAt: 'desc' },
-
                 include: {
-                    user: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                            avatar: true,
-                        },
-                    },
+                    user: true,
                     board: {
                         select: {
                             id: true,
@@ -155,9 +147,18 @@ export class StudentService {
             totalPages: Math.ceil(total / limit),
             data: students.map((s) => ({
                 id: s.id,
+                userId: s.user.id ?? null,
                 name: s.user?.name ?? null,
                 email: s.user?.email ?? null,
+                phone: s.user?.phone ?? null,
                 avatar: s.user?.avatar ?? null,
+                role: s.user.role,
+                signupIntent: s.user.signupIntent,
+                isActive: s.user.isActive,
+                isEmailVerified: s.user.isEmailVerified,
+                profileCompleted: s.user.profileCompleted,
+                provider: s.user.provider,
+                createdAt: s.user.createdAt,
                 board: s.board?.name ?? null,
                 level: s.level?.name ?? null,
                 language: s.preferredLanguage?.name ?? null,
