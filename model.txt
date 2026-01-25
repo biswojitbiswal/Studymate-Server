@@ -1,0 +1,128 @@
+model KnowledgeSubject {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId String   @db.ObjectId
+
+  title     String   // e.g. "Aptitude", "JavaScript"
+  order     Int?
+
+  chapters  KnowledgeChapter[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+}
+
+
+model KnowledgeChapter {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  subjectId  String   @db.ObjectId
+  studentId  String   @db.ObjectId
+
+  title      String   // e.g. "Number System"
+  order      Int?
+
+  subject    KnowledgeSubject @relation(fields: [subjectId], references: [id])
+  topics     KnowledgeTopic[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([subjectId])
+  @@index([studentId])
+}
+
+
+
+model KnowledgeTopic {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  chapterId  String   @db.ObjectId
+  subjectId  String   @db.ObjectId
+  studentId  String   @db.ObjectId
+
+  title      String   // e.g. "HCF & LCM"
+  summary    String?  // manual short summary (3–6 lines)
+
+  isPinned   Boolean  @default(false)
+  lastViewed DateTime?
+
+  chapter    KnowledgeChapter @relation(fields: [chapterId], references: [id])
+
+  resources  KnowledgeResource[]
+  quickNotes KnowledgeQuickNote[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([chapterId])
+}
+
+
+
+enum KnowledgeResourceType {
+  VIDEO
+  ARTICLE
+  FILE
+  IMAGE
+  CODE
+  OTHER
+}
+
+
+
+
+model KnowledgeResource {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  topicId   String   @db.ObjectId
+  studentId String   @db.ObjectId
+
+  type      KnowledgeResourceType
+  title     String?
+  url       String?   // for links
+  content   String?   // for code or text
+  language  String?   // for CODE (js, java, python)
+
+  note      String?   // “Watch from 5:30”
+  isKey     Boolean   @default(false) // ⭐ important for revision
+  isBest    Boolean   @default(false) // ✅ best resource
+
+  topic     KnowledgeTopic @relation(fields: [topicId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([topicId])
+  @@index([studentId])
+}
+
+
+
+model KnowledgeQuickNote {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  topicId   String   @db.ObjectId
+  studentId String   @db.ObjectId
+
+  content   String   // short 1–2 line note
+  isKey     Boolean  @default(false) // ⭐ appears in revision
+
+  topic     KnowledgeTopic @relation(fields: [topicId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([topicId])
+}
+
+
+
+model KnowledgeRevisionSnapshot {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  topicId   String   @db.ObjectId
+  studentId String   @db.ObjectId
+
+  content   String   // AI or manual compiled revision
+  version   Int
+
+  createdAt DateTime @default(now())
+}

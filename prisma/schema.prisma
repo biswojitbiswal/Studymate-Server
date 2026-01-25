@@ -105,9 +105,9 @@ model Tutor{
   qualification           String[]
   demoLinks               String[]
 
-  tutorStatus             TutorStatus               @default(NOT_APPLIED)
+  tutorStatus             TutorStatus               @default(PENDING_REVIEW)
 
-  rating                  Int                       @default(0)
+  rating                  Float                     @default(0.0)
   totalStudents           Int                       @default(0)
 
   tutorSubjects           TutorSubject[]

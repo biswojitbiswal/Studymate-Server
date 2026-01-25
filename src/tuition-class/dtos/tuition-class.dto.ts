@@ -394,25 +394,37 @@ export class BrowseClassFilterDto {
     @IsOptional()
     @IsArray()
     @IsMongoId({ each: true })
+    @Transform(({ value }) =>
+        Array.isArray(value) ? value : [value]
+    )
     subjectIds?: string[];
 
     @IsOptional()
     @IsArray()
     @IsMongoId({ each: true })
+    @Transform(({ value }) =>
+        Array.isArray(value) ? value : [value]
+    )
     levelIds?: string[];
 
     @IsOptional()
     @IsArray()
     @IsMongoId({ each: true })
+    @Transform(({ value }) =>
+        Array.isArray(value) ? value : [value]
+    )
     boardIds?: string[];
 
     @IsOptional()
     @IsArray()
     @IsMongoId({ each: true })
+    @Transform(({ value }) =>
+        Array.isArray(value) ? value : [value]
+    )
     languageIds?: string[];
 
     @IsOptional()
-    @Type(() => Boolean)
+    @Transform(({ value }) => value === 'true')
     @IsBoolean()
     paid?: boolean; // true = paid, false = free
 

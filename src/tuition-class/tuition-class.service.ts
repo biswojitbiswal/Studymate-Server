@@ -725,7 +725,7 @@ export class TuitionClassService {
                 where.boardId = { in: dto.boardIds };
             }
 
-            if (dto.paid) {
+            if (dto.paid !== undefined) {
                 where.isPaid = dto.paid
             }
 
@@ -754,20 +754,42 @@ export class TuitionClassService {
                     skip,
                     take: limit,
                     orderBy,
-                    include: {
+                    select: {
+                        id: true,
+                        title: true,
+                        previewImg: true,
+                        previewVdo: true,
+                        price: true,
+                        type: true,
+                        subjectId: true,
+                        levelId: true,
                         tutor: {
                             select: {
                                 id: true,
+                                rating: true,
+                                totalStudents: true,
+                                yearsOfExp: true,
                                 user: {
                                     select: {
                                         id: true,
-                                        name: true
+                                        name: true,
+                                        avatar: true
                                     }
                                 }
                             },
                         },
-                        subject: true,
-                        level: true,
+                        subject: {
+                            select: {
+                                id: true,
+                                name: true
+                            }
+                        },
+                        level: {
+                            select: {
+                                id: true,
+                                name: true
+                            }
+                        },
                     },
                 }),
 
@@ -792,7 +814,7 @@ export class TuitionClassService {
     async getPublicById(classId: string) {
         try {
             const klass = await this.prisma.tuitionClass.findUnique({
-                where: {id: classId},
+                where: { id: classId },
                 select: {
                     id: true,
                     title: true,
