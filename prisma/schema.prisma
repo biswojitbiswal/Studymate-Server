@@ -598,3 +598,87 @@ model TutorLeave {
 
   @@index([tutorId, startDate, endDate])
 }
+
+
+enum PriceOn{
+  CLASS
+  RESOURCE
+}
+
+enum PriceType{
+  PERCENTAGE
+  FIXED
+}
+
+model CommissionSetting {
+  id                    String            @id @default(auto()) @map("_id") @db.ObjectId
+
+  appliesTo             PriceOn           @default(CLASS)
+  type                  PriceType         @default(PERCENTAGE)
+  value                 Float             @default(0.0)
+
+  status                Status            @default(ACTIVE)
+
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  @@unique([appliesTo, type])
+  @@index([status])
+}
+
+
+
+model TaxSetting {
+  id                String              @id @default(auto()) @map("_id") @db.ObjectId
+
+  name              String
+  value             Float               @default(0.0)
+  status            Status              @default(ACTIVE)
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+}
+
+
+model Coupon {
+  id                      String            @id @default(auto()) @map("_id") @db.ObjectId
+
+  code                    String            @unique
+  description             String?
+
+  discountType            PriceType
+  discountValue           Float
+
+  appliesTo               PriceOn
+  classId                 String?           @db.ObjectId
+  resourceId              String?           @db.ObjectId
+
+  minOrderValue           Float?
+  maxDiscount             Float?
+
+  usageLimit              Int?
+  perUserLimit            Int?
+
+  startsAt                DateTime?
+  endsAt                  DateTime?
+
+  status                  Status            @default(ACTIVE)
+
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+}
+
+
+model CouponRedemption {
+  id                        String          @id @default(auto()) @map("_id") @db.ObjectId
+
+  couponId                  String          @db.ObjectId
+  userId                    String          @db.ObjectId
+  orderId                   String          @db.ObjectId
+
+  discountApplied           Float
+
+  createdAt                 DateTime        @default(now())
+
+  @@index([couponId, userId])
+}

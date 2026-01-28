@@ -831,9 +831,13 @@ export class TuitionClassService {
                     startTime: true,
                     durationMin: true,
                     isPaid: true,
+                    syllabus: true,
                     tutor: {
                         select: {
                             id: true,
+                            rating: true,
+                            totalStudents: true,
+                            yearsOfExp: true,
                             user: {
                                 select: {
                                     id: true,
@@ -870,10 +874,9 @@ export class TuitionClassService {
                 }
             })
 
-            return {
-                message: "Class retrived successfully",
-                data: klass
-            }
+            if(!klass) throw new NotFoundException("Class not found")
+
+            return klass;
         } catch (error) {
             throw error;
         }

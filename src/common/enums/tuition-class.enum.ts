@@ -25,3 +25,9 @@ export enum ClassStatus {
     COMPLETED = 'COMPLETED',
     ARCHIVED = 'ARCHIVED',
 }
+
+
+export enum Status{
+    ACTIVE = 'ACTIVE',
+    INACTIVE = 'INACTIVE'
+}

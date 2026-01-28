@@ -25,6 +25,9 @@ import { CronModule } from './cron-job/cron-job.module';
 import { EmailModule } from './mail/mail.module';
 import { StudentModule } from './student/student.module';
 import { TutorModule } from './tutor/tutor.module';
+import { CommissionModule } from './commision/commission.module';
+import { TaxSettingModule } from './tax/tax-setting.module';
+import { CouponModule } from './coupon/coupon.module';
 
 
 @Module({
@@ -50,7 +53,10 @@ import { TutorModule } from './tutor/tutor.module';
     MeetingModule,
     EmailModule,
     StudentModule,
-    TutorModule
+    TutorModule,
+    CommissionModule,
+    TaxSettingModule,
+    CouponModule
   ],
   providers: [
     {
