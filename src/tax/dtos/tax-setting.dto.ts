@@ -27,7 +27,7 @@ export class UpdateTaxSettingDto {
 
 
   @Transform(({ value }) =>
-    value === undefined ? undefined : parseFloat(value)
+    value === undefined ? undefined : Number(value)
   )
   @IsNumber()
   @IsOptional()

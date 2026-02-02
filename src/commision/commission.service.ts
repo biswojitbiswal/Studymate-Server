@@ -64,11 +64,11 @@ export class CommissionService {
 
       if (termRaw.length > 0) {
         if (priceTypeValues.includes(termUpper)) {
-          searchOr.push({ priceType: termUpper as any });
+          searchOr.push({ type: termUpper as any });
         }
 
         if (priceOnValues.includes(termUpper)) {
-          searchOr.push({ priceOn: termUpper as any });
+          searchOr.push({ appliesTo: termUpper as any });
         }
 
         const parsedNum = Number(termRaw);
@@ -127,8 +127,8 @@ export class CommissionService {
       if (!exists) throw new NotFoundException("Commission Not Found");
 
       const data: any = {};
-      if (dto.priceType !== undefined) data.priceType = dto.priceType;
-      if (dto.appliesTo !== undefined) data.priceOn = dto.appliesTo;
+      if (dto.type !== undefined) data.type = dto.type;
+      if (dto.appliesTo !== undefined) data.appliesTo = dto.appliesTo;
       if (dto.value !== undefined) data.value = dto.value;
       if(dto.status !== undefined) data.status = dto.status;
 
@@ -136,6 +136,8 @@ export class CommissionService {
       
       return updated;
     } catch (error: any) {
+      console.log(error);
+      
       if (error?.code === 'P2002') {
         throw new BadRequestException("Commission with this (appliesTo, priceType) already exists");
       }

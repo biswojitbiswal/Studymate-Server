@@ -99,6 +99,8 @@ export class TaxSettingService {
 
   async update(dto: UpdateTaxSettingDto, id: string) {
     try {
+      console.log(dto);
+      
       const exists = await this.prisma.taxSetting.findUnique({ where: { id } });
       if (!exists) throw new NotFoundException("TaxSetting Not Found");
 

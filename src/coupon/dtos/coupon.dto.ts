@@ -6,14 +6,11 @@ import {
   IsInt,
   IsDateString,
   Min,
-  Max,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { PartialType } from '@nestjs/mapped-types';
 import { PriceOn, PriceType } from 'src/common/enums/price.enum';
 import { Status } from 'src/common/enums/tuition-class.enum';
-import { PartialType } from '@nestjs/mapped-types';
-
-
 
 export class CreateCouponDto {
   @IsString()
@@ -38,10 +35,6 @@ export class CreateCouponDto {
   @IsOptional()
   @IsString()
   classId?: string;
-
-  @IsOptional()
-  @IsString()
-  resourceId?: string;
 
   @IsOptional()
   @Transform(({ value }) => Number(value))
@@ -77,7 +70,5 @@ export class CreateCouponDto {
   @IsEnum(Status)
   status?: Status;
 }
-
-
 
 export class UpdateCouponDto extends PartialType(CreateCouponDto) {}

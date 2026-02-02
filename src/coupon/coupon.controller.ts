@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { CouponService } from "./coupon.service";
 import { CreateCouponDto, UpdateCouponDto } from "./dtos/coupon.dto";
 import { PrismaService } from "src/prisma/prisma.service";
@@ -106,7 +106,9 @@ export class CouponController {
     @UseGuards(AuthGuard, RolesGuard)
     @Roles('ADMIN')
     @Patch(':id')
-    async update(@Param('id') id: string, @Body() dto: UpdateCouponDto) {
+    async update(@Param('id') id: string, @Body('payload') dto: UpdateCouponDto, @Req() req: any,) {
+        console.log("RAW BODY:", req.body);
+        console.log("DTO:", dto);
         return await this.coupon.update(id, dto)
     }
 

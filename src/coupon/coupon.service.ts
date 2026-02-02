@@ -140,7 +140,9 @@ export class CouponService {
 
 
 
-    async update(id: string, dto: Partial<CreateCouponDto>) {
+    async update(id: string, dto: UpdateCouponDto) {
+        console.log(dto);
+        
         const existing = await this.prisma.coupon.findUnique({ where: { id } });
         if (!existing) throw new NotFoundException('Coupon not found');
 

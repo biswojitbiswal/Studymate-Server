@@ -63,7 +63,7 @@ export class AuthController {
     const cookie = req.cookies['sm_refresh'];
     console.log("🔥 REFRESH API HIT", req.headers.cookie);
     if (!cookie) throw new UnauthorizedException('No refresh token');
-    console.log(cookie, "=================");
+    // console.log(cookie, "=================");
 
 
     let parsed: { userId: string; t: string };

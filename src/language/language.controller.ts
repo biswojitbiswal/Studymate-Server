@@ -30,8 +30,8 @@ export class LanguageController{
     
     
         @UseGuards(AuthGuard, RolesGuard)
-        @Get()
         @Roles('ADMIN')
+        @Get()
         async get(@Query() dto: PaginationDto){
             return await this.language.get(dto)
         }

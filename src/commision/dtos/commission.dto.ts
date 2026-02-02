@@ -26,7 +26,7 @@ export class UpdateCommissionDto {
 
   @IsEnum(PriceType)
   @IsOptional()
-  priceType?: PriceType;
+  type?: PriceType;
 
 
   @IsEnum(PriceOn)
@@ -34,7 +34,9 @@ export class UpdateCommissionDto {
   appliesTo?: PriceOn;
 
 
-  @Transform(({ value }) => (value === undefined ? undefined : parseFloat(value)))
+  @Transform(({ value }) =>
+    value === undefined ? undefined : Number(value)
+  )
   @IsNumber()
   @IsOptional()
   value?: number;
