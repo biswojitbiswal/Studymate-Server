@@ -6,6 +6,7 @@ import {
   IsInt,
   IsDateString,
   Min,
+  IsNotEmpty,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { PartialType } from '@nestjs/mapped-types';
@@ -72,3 +73,29 @@ export class CreateCouponDto {
 }
 
 export class UpdateCouponDto extends PartialType(CreateCouponDto) {}
+
+
+export class CouponFilterDto{
+  @IsString()
+  @IsNotEmpty()
+  productId: string
+
+  @IsString()
+  @IsEnum(PriceOn)
+  itemType: PriceOn
+}
+
+
+export class CouponValidateDto{
+  @IsString()
+  @IsNotEmpty()
+  couponCode: string
+
+  @IsString()
+  @IsNotEmpty()
+  productId: string
+
+  @IsString()
+  @IsEnum(PriceOn)
+  itemType: PriceOn
+}

@@ -53,6 +53,9 @@ model User {
   student                 Student?
   tutor                   Tutor?
 
+  orders                  Order[]
+  transactions            Transaction[]
+
 
   createdAt               DateTime                  @default(now())
   updatedAt               DateTime                  @updatedAt
@@ -464,6 +467,8 @@ model ClassEnrollment {
   classId           String              @db.ObjectId
   studentId         String              @db.ObjectId
 
+  orderId           String              @db.ObjectId
+
   enrolledAt        DateTime            @default(now())
 
   klass             TuitionClass        @relation(fields: [classId], references: [id])
@@ -669,16 +674,136 @@ model Coupon {
 }
 
 
+enum RedeemedStatus{
+  RESERVED
+  REDEEMED
+  RELEASED
+}
+
 model CouponRedemption {
   id                        String          @id @default(auto()) @map("_id") @db.ObjectId
 
   couponId                  String          @db.ObjectId
   userId                    String          @db.ObjectId
+
   orderId                   String          @db.ObjectId
+  order                     Order           @relation(fields: [orderId], references: [id])
 
   discountApplied           Float
+
+  status                    RedeemedStatus
+  redeemedAt                DateTime?
 
   createdAt                 DateTime        @default(now())
 
   @@index([couponId, userId])
+  @@unique([orderId])
 }
+
+
+enum ProductType{
+  CLASS
+  RESOURCE
+}
+
+enum OrderStatus{
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+
+model OrderCounter {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  year      Int
+  seq       Int      @default(0)
+
+  @@unique([year])
+}
+
+model Order{
+  id                      String          @id @default(auto()) @map("_id") @db.ObjectId
+
+  userId                  String          @db.ObjectId
+  user                    User            @relation(fields: [userId], references: [id])
+
+  orderNo                 String
+
+  productType             ProductType
+  productId               String          @db.ObjectId
+
+  basePrice               Float
+
+  commission              Float
+  commissionAmount        Float
+
+  tax                     Float
+  taxAmount               Float
+
+  discountAmount          Float
+
+  totalAmount             Float
+
+  couponId                String?          @db.ObjectId
+
+
+  status                  OrderStatus
+
+  couponRedemption        CouponRedemption?
+  transactions            Transaction[]
+
+
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+}
+
+
+enum PaymentProvider {
+  RAZORPAY
+  STRIPE
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum PaymentType {
+  PAYMENT
+  REFUND
+}
+
+
+model Transaction {
+  id                String          @id @default(auto()) @map("_id") @db.ObjectId
+
+  orderId           String          @db.ObjectId
+  order             Order           @relation(fields: [orderId], references: [id])
+
+  userId            String          @db.ObjectId
+  user              User            @relation(fields: [userId], references: [id])
+
+  provider          PaymentProvider
+  type              PaymentType     @default(PAYMENT)
+
+  amount            Float
+  currency          String          @default("INR")
+
+  providerOrderId   String?
+  providerPaymentId String?
+  providerSignature String?
+
+  status            PaymentStatus
+
+  failureReason     String?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([providerPaymentId])
+}
+

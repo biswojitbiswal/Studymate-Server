@@ -28,6 +28,7 @@ import { TutorModule } from './tutor/tutor.module';
 import { CommissionModule } from './commision/commission.module';
 import { TaxSettingModule } from './tax/tax-setting.module';
 import { CouponModule } from './coupon/coupon.module';
+import { OrderModule } from './order/order.module';
 
 
 @Module({
@@ -56,7 +57,8 @@ import { CouponModule } from './coupon/coupon.module';
     TutorModule,
     CommissionModule,
     TaxSettingModule,
-    CouponModule
+    CouponModule,
+    OrderModule
   ],
   providers: [
     {

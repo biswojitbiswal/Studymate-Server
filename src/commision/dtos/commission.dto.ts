@@ -1,5 +1,5 @@
 import { Transform } from "class-transformer";
-import { IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional } from "class-validator";
+import { IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 import { PriceOn, PriceType } from "src/common/enums/price.enum";
 import { Status } from "src/common/enums/tuition-class.enum";
 

@@ -3,6 +3,8 @@ import { PrismaService } from "src/prisma/prisma.service";
 import { CreateCommissionDto, UpdateCommissionDto } from "./dtos/commission.dto";
 import { PaginationDto } from "src/common/dtos/pagination.dto";
 import { Prisma } from "@prisma/client";
+import { PriceOn, PriceType } from "src/common/enums/price.enum";
+import { RedeemedStatus } from "src/common/enums/coupon.enum";
 
 @Injectable()
 export class CommissionService {
@@ -130,14 +132,14 @@ export class CommissionService {
       if (dto.type !== undefined) data.type = dto.type;
       if (dto.appliesTo !== undefined) data.appliesTo = dto.appliesTo;
       if (dto.value !== undefined) data.value = dto.value;
-      if(dto.status !== undefined) data.status = dto.status;
+      if (dto.status !== undefined) data.status = dto.status;
 
       const updated = await this.prisma.commissionSetting.update({ where: { id }, data });
-      
+
       return updated;
     } catch (error: any) {
       console.log(error);
-      
+
       if (error?.code === 'P2002') {
         throw new BadRequestException("Commission with this (appliesTo, priceType) already exists");
       }
@@ -145,4 +147,5 @@ export class CommissionService {
       throw new InternalServerErrorException("Internal Server Error");
     }
   }
+
 }

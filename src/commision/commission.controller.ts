@@ -5,7 +5,8 @@ import { RolesGuard } from "src/common/guards/roles.guard";
 import { Roles } from "src/common/decorator/roles.decorator";
 import { Public } from "@prisma/client/runtime/library";
 import { PaginationDto } from "src/common/dtos/pagination.dto";
-import { CreateCommissionDto, UpdateCommissionDto } from "./dtos/commission.dto";
+import {CreateCommissionDto, UpdateCommissionDto } from "./dtos/commission.dto";
+import { GetCurrentUserId } from "src/common/decorator/get-current-user-id.decorator";
 
 @Controller({ path: 'commission', version: '1' })
 export class CommissionController {
@@ -31,6 +32,7 @@ export class CommissionController {
   async getAll(@Query() dto: PaginationDto) {
     return await this.commissionService.getAll(dto);
   }
+
 
 
 

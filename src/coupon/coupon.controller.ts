@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { CouponService } from "./coupon.service";
-import { CreateCouponDto, UpdateCouponDto } from "./dtos/coupon.dto";
+import { CouponFilterDto, CouponValidateDto, CreateCouponDto, UpdateCouponDto } from "./dtos/coupon.dto";
 import { PrismaService } from "src/prisma/prisma.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { Roles } from "src/common/decorator/roles.decorator";
 import { RolesGuard } from "src/common/guards/roles.guard";
 import { PaginationDto } from "src/common/dtos/pagination.dto";
+import { GetCurrentUserId } from "src/common/decorator/get-current-user-id.decorator";
 
 @Controller({
     path: 'coupon',
@@ -31,37 +32,12 @@ export class CouponController {
     }
 
 
-    // @UseGuards(AtGaurd)
-    // @Get('customer')
-    // @Roles(UserRole.CUSTOMER)
-    // async getForCustomer(@GetCurrentUserId() userId: string) {
-    //     try {
-    //         const user = await this.prisma.user.findUnique({
-    //             where: { id: userId },
-    //             select: {
-    //                 id: true,
-    //             }
-    //         })
-
-    //         if (!user) throw new Notification("User not found");
-
-    //         const customer = await this.prisma.customer.findUnique({
-    //             where: { userId: user.id }
-    //         })
-
-    //         let coupon;
-    //         if (customer) {         
-    //             coupon = await this.coupon.getForCustomer(customer.id);
-    //         }
-
-    //         if(!coupon) throw new NotFoundException("Invalid or expired coupon")
-
-    //         return coupon;
-    //     } catch (error) {
-    //         if(error instanceof HttpException) throw error;
-    //         throw new InternalServerErrorException("Internal server errror")
-    //     }
-    // }
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles('STUDENT')
+    @Get('checkout')
+    async getCouponForCheckout(@GetCurrentUserId() userId: string, @Query() dto: CouponFilterDto) {
+        return await this.coupon.getCouponForCheckout(userId, dto)
+    }
 
 
     // @UseGuards(AtGaurd)
@@ -84,6 +60,15 @@ export class CouponController {
     //     if (!customer) throw new Notification("Customer not found");
     //     return await this.coupon.redemeCoupon(customer.id, id)
     // }
+
+
+
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles("STUDENT")
+    @Post('validate')
+    async couponValidate(@Body() dto: CouponValidateDto, @GetCurrentUserId() userId: string) {
+        return await this.coupon.couponValidate(dto, userId);
+    }
 
 
 

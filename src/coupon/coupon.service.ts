@@ -1,9 +1,11 @@
 import { BadRequestException, HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateCouponDto, UpdateCouponDto } from './dtos/coupon.dto';
+import { CouponFilterDto, CouponValidateDto, CreateCouponDto, UpdateCouponDto } from './dtos/coupon.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { Prisma } from '@prisma/client';
 import { Status } from 'src/common/enums/tuition-class.enum';
+import { PriceOn, PriceType } from 'src/common/enums/price.enum';
+import { RedeemedStatus } from 'src/common/enums/coupon.enum';
 
 @Injectable()
 export class CouponService {
@@ -142,7 +144,7 @@ export class CouponService {
 
     async update(id: string, dto: UpdateCouponDto) {
         console.log(dto);
-        
+
         const existing = await this.prisma.coupon.findUnique({ where: { id } });
         if (!existing) throw new NotFoundException('Coupon not found');
 
@@ -175,77 +177,94 @@ export class CouponService {
     }
 
 
-    // async getForCustomer(customerId: string) {
-    //     try {
-    //         const curr = new Date();
+    async getCouponForCheckout(userId: string, dto: CouponFilterDto) {
+        try {
+            const now = new Date();
 
-    //         // 1) DB: only status + redemption filters
-    //         const coupons = await this.prisma.coupon.findMany({
-    //             where: {
-    //                 status: Status.ACTIVE,
-    //                 redemptions: {
-    //                     none: {
-    //                         customerId,
-    //                     },
-    //                 },
-    //             },
-    //             select: {
-    //                 id: true,
-    //                 title: true,
-    //                 description: true,
-    //                 code: true,
-    //                 type: true,
-    //                 value: true,
-    //                 status: true,
-    //                 startAt: true,
-    //                 endAt: true,
-    //                 minOrderAmount: true,
-    //                 maxDiscount: true,
-    //                 perUserLimit: true,
-    //                 timesUsed: true,
-    //             },
-    //             orderBy: { createdAt: 'desc' },
-    //         });
+            const klass = await this.prisma.tuitionClass.findUnique({
+                where: { id: dto.productId },
+                select: { price: true }
+            });
 
-    //         // 2) TS: apply optional start/end date logic
-    //         const available = coupons.filter(c => {
-    //             const start = c.startAt;
-    //             const end = c.endAt;
+            if (!klass) throw new NotFoundException("Class not found");
 
-    //             // case 1: no dates at all -> always show (only status + redemption checked)
-    //             if (!start && !end) return true;
+            const price = klass.price ?? 0;
 
-    //             // case 2: has startAt, but not reached yet -> hide
-    //             if (start && curr < start) return false;
+            const userUsage = await this.prisma.couponRedemption.groupBy({
+                by: ['couponId'],
+                where: {
+                    userId,
+                    status: RedeemedStatus.REDEEMED
+                },
+                _count: true
+            });
 
-    //             // case 3: has endAt, already passed -> hide
-    //             if (end && curr > end) return false;
+            const userUsageMap = new Map(
+                userUsage.map(u => [u.couponId, u._count])
+            );
 
-    //             // otherwise: valid
-    //             return true;
-    //         });
+            const coupons = await this.prisma.coupon.findMany({
+                where: {
+                    status: 'ACTIVE',
 
-    //         if (!available || available.length === 0) {
-    //             return {
-    //                 error: 0,
-    //                 message: "No available coupons",
-    //                 data: [],
-    //             };
-    //         }
+                    OR: [
+                        { startsAt: null },
+                        { startsAt: { lte: now } }
+                    ],
 
-    //         return {
-    //             error: 0,
-    //             message: "Coupons retrieved successfully",
-    //             data: available,
-    //         };
-    //     } catch (error) {
-    //         if (error instanceof HttpException) {
-    //             throw error;
-    //         }
-    //         console.error(error);
-    //         throw new InternalServerErrorException("Internal Server Error");
-    //     }
-    // }
+                    AND: [
+                        {
+                            OR: [
+                                { endsAt: null },
+                                { endsAt: { gte: now } }
+                            ]
+                        },
+                        { appliesTo: dto.itemType }
+                    ]
+                }
+            });
+
+            const validCoupons = [] as any;
+
+            for (const c of coupons) {
+                if (dto.itemType === PriceOn.CLASS && c.classId && c.classId !== dto.productId)
+                    continue;
+
+                if (dto.itemType === PriceOn.RESOURCE && c.resourceId && c.resourceId !== dto.productId)
+                    continue;
+
+                if (c.minOrderValue && price < c.minOrderValue)
+                    continue;
+
+                const usedByUser = userUsageMap.get(c.id) || 0;
+                if (c.perUserLimit && usedByUser >= c.perUserLimit)
+                    continue;
+
+                if (c.usageLimit) {
+                    const totalUsed = await this.prisma.couponRedemption.count({
+                        where: { couponId: c.id, status: RedeemedStatus.REDEEMED }
+                    });
+                    if (totalUsed >= c.usageLimit)
+                        continue;
+                }
+
+                validCoupons.push({
+                    id: c.id,
+                    code: c.code,
+                    description: c.description,
+                    discountType: c.discountType,
+                    discountValue: c.discountValue,
+                    maxDiscount: c.maxDiscount,
+                    minOrderValue: c.minOrderValue
+                });
+            }
+
+            return validCoupons;
+        } catch (error) {
+            throw error;
+        }
+    }
+
 
 
     // async redemeCoupon(customerId: string, id: string) {
@@ -258,4 +277,142 @@ export class CouponService {
     //         throw new InternalServerErrorException("Internal Server Error")
     //     }
     // }
+
+
+
+    async couponValidate(dto: CouponValidateDto, userId: string) {
+        try {
+            const coupon = await this.prisma.coupon.findUnique({
+                where: {
+                    code: dto.couponCode,
+                },
+            })
+            if (!coupon || coupon.status !== 'ACTIVE') {
+                throw new BadRequestException("Invalid Coupon");
+            }
+
+            if (coupon.appliesTo !== dto.itemType) {
+                throw new BadRequestException('Coupon not applicable for this item');
+            }
+
+            const now = new Date();
+            if (coupon.startsAt && now < coupon.startsAt) {
+                throw new BadRequestException("Coupon not stated yet.");
+            }
+            if (coupon.endsAt && now > coupon.endsAt) {
+                throw new BadRequestException("Coupon expired.");
+            }
+
+            let pricePaise = 0;
+
+            if (dto.itemType === PriceOn.CLASS) {
+
+                const klass = await this.prisma.tuitionClass.findUnique({
+                    where: { id: dto.productId },
+                    select: { id: true, price: true }
+                });
+
+                if (!klass) throw new NotFoundException('Class not found');
+
+                pricePaise = Math.round((klass.price ?? 0) * 100);
+            }
+
+            if (coupon.classId) {
+                if (coupon.classId !== dto.productId) {
+                    throw new BadRequestException('Coupon not valid for this class');
+                }
+            }
+
+            if (coupon.resourceId) {
+                if (coupon.resourceId !== dto.productId) {
+                    throw new BadRequestException('Coupon not valid for this resource');
+                }
+            }
+
+            const [totalCount, usedCount] = await this.prisma.$transaction([
+                this.prisma.couponRedemption.count({
+                    where: {
+                        couponId: coupon.id,
+                        status: RedeemedStatus.REDEEMED
+                    }
+                }),
+                this.prisma.couponRedemption.count({
+                    where: {
+                        couponId: coupon.id,
+                        userId,
+                        status: RedeemedStatus.REDEEMED
+                    }
+                })
+            ])
+
+            if (coupon.usageLimit && totalCount >= coupon.usageLimit) {
+                throw new BadRequestException("Coupon usage limit exceed");
+            }
+
+            if (coupon.perUserLimit && usedCount >= coupon.perUserLimit) {
+                throw new BadRequestException("Coupon usage limit exceed");
+            }
+
+            if (coupon.minOrderValue) {
+                const minOrderPaise = Math.round(coupon.minOrderValue * 100);
+
+                if (pricePaise < minOrderPaise) {
+                    throw new BadRequestException(
+                        `Coupon valid only above ₹${coupon.minOrderValue}`
+                    );
+                }
+            }
+
+
+            let discountPaise = 0;
+
+            if (coupon.discountType === PriceType.PERCENTAGE) {
+
+                discountPaise = Math.round(
+                    (coupon.discountValue / 100) * pricePaise
+                );
+
+                if (coupon.maxDiscount) {
+                    const maxDiscountPaise = Math.round(coupon.maxDiscount * 100);
+                    if (discountPaise > maxDiscountPaise) {
+                        discountPaise = maxDiscountPaise;
+                    }
+                }
+
+            } else {
+                discountPaise = Math.round(coupon.discountValue * 100);
+            }
+
+            const subtotalPaise = pricePaise;
+            const discountedSubtotalPaise = Math.max(subtotalPaise - discountPaise, 0);
+
+            const taxes = await this.prisma.taxSetting.findMany({
+                where: { status: 'ACTIVE' }
+            });
+
+            let taxPaise = 0;
+            let totalPecentage = 0;
+            for (const t of taxes) {
+                const tPaise = Math.round((t.value / 100) * discountedSubtotalPaise);
+                taxPaise += tPaise;
+                totalPecentage += t.value ?? 0;
+            }
+
+            const totalPaise = discountedSubtotalPaise + taxPaise;
+
+            return {
+                valid: true,
+                couponId: coupon.id,
+                pricing: {
+                    subtotal: subtotalPaise / 100,
+                    discount: discountPaise / 100,
+                    totaltaxAmount: taxPaise / 100,
+                    toalTaxPecentage: totalPecentage,
+                    totalAmount: totalPaise / 100
+                }
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
 }
