@@ -40,28 +40,6 @@ export class CouponController {
     }
 
 
-    // @UseGuards(AtGaurd)
-    // @Get('redeme/:id')
-    // @Roles(UserRole.CUSTOMER)
-    // async redemeCoupon(@Param('id') id: string, @GetCurrentUserId() userId: string) {
-    //     const user = await this.prisma.user.findUnique({
-    //         where: { id: userId },
-    //         select: {
-    //             id: true,
-    //         }
-    //     })
-
-    //     if (!user) throw new Notification("User not found");
-
-    //     const customer = await this.prisma.customer.findUnique({
-    //         where: { userId: user.id }
-    //     })
-
-    //     if (!customer) throw new Notification("Customer not found");
-    //     return await this.coupon.redemeCoupon(customer.id, id)
-    // }
-
-
 
     @UseGuards(AuthGuard, RolesGuard)
     @Roles("STUDENT")

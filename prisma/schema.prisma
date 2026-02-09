@@ -735,13 +735,12 @@ model Order{
 
   basePrice               Float
 
-  commission              Float
   commissionAmount        Float
 
   tax                     Float
   taxAmount               Float
 
-  discountAmount          Float
+  discountAmount          Float?
 
   totalAmount             Float
 

@@ -72,10 +72,10 @@ export class CreateCouponDto {
   status?: Status;
 }
 
-export class UpdateCouponDto extends PartialType(CreateCouponDto) {}
+export class UpdateCouponDto extends PartialType(CreateCouponDto) { }
 
 
-export class CouponFilterDto{
+export class CouponFilterDto {
   @IsString()
   @IsNotEmpty()
   productId: string
@@ -86,7 +86,7 @@ export class CouponFilterDto{
 }
 
 
-export class CouponValidateDto{
+export class CouponValidateDto {
   @IsString()
   @IsNotEmpty()
   couponCode: string
@@ -99,3 +99,5 @@ export class CouponValidateDto{
   @IsEnum(PriceOn)
   itemType: PriceOn
 }
+
+

@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client';
 import { Status } from 'src/common/enums/tuition-class.enum';
 import { PriceOn, PriceType } from 'src/common/enums/price.enum';
 import { RedeemedStatus } from 'src/common/enums/coupon.enum';
+import { OrderStatus } from 'src/common/enums/order.enum';
 
 @Injectable()
 export class CouponService {
@@ -267,16 +268,178 @@ export class CouponService {
 
 
 
-    // async redemeCoupon(customerId: string, id: string) {
-    //     try {
+    async createCouponRemption(tx: Prisma.TransactionClient, userId: string, code: string, orderId: string) {
+        try {
+            const order = await tx.order.findUnique({
+                where: { id: orderId },
+                select: {
+                    id: true,
+                    totalAmount: true,
+                    productType: true,
+                    productId: true,
+                    basePrice: true,
+                    status: true
+                }
+            });
 
-    //     } catch (error) {
-    //         if (error instanceof HttpException) {
-    //             throw error;
-    //         }
-    //         throw new InternalServerErrorException("Internal Server Error")
-    //     }
-    // }
+            if (!order) throw new NotFoundException("Order not found");
+            if (order.status !== OrderStatus.PENDING) {
+                throw new BadRequestException("Order is no longer payable");
+            }
+
+
+            const coupon = await tx.coupon.findUnique({
+                where: { code }
+            });
+
+            if (!coupon || coupon.status !== 'ACTIVE')
+                throw new BadRequestException("Invalid coupon");
+
+
+            const now = new Date();
+
+            if (coupon.startsAt && now < coupon.startsAt)
+                throw new BadRequestException("Coupon not started yet");
+
+            if (coupon.endsAt && now > coupon.endsAt)
+                throw new BadRequestException("Coupon expired");
+
+
+            if (coupon.appliesTo !== order.productType)
+                throw new BadRequestException("Coupon not applicable");
+
+            if (order.productType === 'CLASS' && coupon.classId && coupon.classId !== order.productId)
+                throw new BadRequestException("Coupon not valid for this class");
+
+
+            const usedCount = await tx.couponRedemption.count({
+                where: {
+                    couponId: coupon.id,
+                    status: {
+                        in: [RedeemedStatus.REDEEMED, RedeemedStatus.RESERVED]
+                    }
+                }
+            });
+
+            if (coupon.usageLimit && usedCount >= coupon.usageLimit)
+                throw new BadRequestException("Coupon fully used");
+
+
+            const userUsed = await tx.couponRedemption.count({
+                where: {
+                    couponId: coupon.id,
+                    userId,
+                    status: RedeemedStatus.REDEEMED
+                }
+            });
+
+            if (coupon.perUserLimit && userUsed >= coupon.perUserLimit)
+                throw new BadRequestException("You already used this coupon");
+
+
+            let discount = 0;
+            const basePrice = order.basePrice;
+
+            if (coupon.discountType === 'PERCENTAGE') {
+                discount = (coupon.discountValue / 100) * basePrice;
+
+                if (coupon.maxDiscount && discount > coupon.maxDiscount)
+                    discount = coupon.maxDiscount;
+            } else {
+                discount = coupon.discountValue;
+            }
+
+            discount = Math.min(discount, basePrice);
+
+
+            const redemption = await tx.couponRedemption.create({
+                data: {
+                    userId,
+                    couponId: coupon.id,
+                    orderId: order.id,
+                    discountApplied: discount,
+                    status: RedeemedStatus.RESERVED,
+                }
+            });
+
+            await tx.order.update({
+                where: { id: order.id },
+                data: {
+                    couponId: coupon.id,
+                    discountAmount: discount,
+                    totalAmount: order.totalAmount - discount
+                }
+            });
+
+            return redemption;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+
+
+    async redeemCouponAfterPayment(orderId: string) {
+        try {
+            const order = await this.prisma.order.findUnique({
+                where: { id: orderId }
+            })
+            if (!order) throw new NotFoundException("Order not found");
+
+            const redeemedCoupon = await this.prisma.couponRedemption.findFirst({
+                where: { orderId: order.id }
+            })
+            if (!redeemedCoupon) return;
+
+            if (redeemedCoupon.status === RedeemedStatus.REDEEMED) {
+                return;
+            }
+
+            await this.prisma.couponRedemption.update({
+                where: { id: redeemedCoupon.id },
+                data: {
+                    status: RedeemedStatus.REDEEMED,
+                    redeemedAt: new Date()
+                }
+            })
+        } catch (error) {
+            throw error;
+        }
+    }
+
+
+    async releaseCouponAfterFailure(orderId: string) {
+        try {
+            const order = await this.prisma.order.findUnique({
+                where: { id: orderId },
+                include: { couponRedemption: true }
+            });
+
+            if (!order) return;
+
+            const redemption = order.couponRedemption;
+
+            if (!redemption) return;
+
+            if (redemption.status === RedeemedStatus.REDEEMED)
+                return;
+
+            if (redemption.status === RedeemedStatus.RELEASED)
+                return;
+
+
+            await this.prisma.couponRedemption.update({
+                where: { id: redemption.id },
+                data: {
+                    status: RedeemedStatus.RELEASED
+                }
+            });
+
+        } catch (error) {
+            throw error;
+        }
+    }
+
 
 
 

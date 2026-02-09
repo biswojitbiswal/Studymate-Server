@@ -61,10 +61,16 @@ export class CronService {
         });
 
         let sessonGeneration = {} as any;
+
+        if (classes.length === 0) {
+            this.logger.log("No active group classes found");
+            return;
+        }
+
         for (const klass of classes) {
             sessonGeneration = await this.sessionJob.ensureGroupSessionsGenerated(klass.id);
         }
 
-        this.logger.log(sessonGeneration.message);
+
     }
 }

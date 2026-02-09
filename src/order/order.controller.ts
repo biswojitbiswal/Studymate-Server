@@ -1,9 +1,10 @@
-import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { OrderService } from "./order.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { RolesGuard } from "src/common/guards/roles.guard";
 import { Roles } from "src/common/decorator/roles.decorator";
 import { GetCurrentUserId } from "src/common/decorator/get-current-user-id.decorator";
+import { CreateOrderDto } from "./dtos/order.dto";
 
 @Controller({
     path: 'order',
@@ -12,10 +13,16 @@ import { GetCurrentUserId } from "src/common/decorator/get-current-user-id.decor
 export class OrderController{
     constructor(private readonly orderService: OrderService){}
 
-    @UseGuards(AuthGuard, RolesGuard)
-    @Roles('STUDENT')
+    @UseGuards(AuthGuard)
     @Get("checkout/:classId")
     async checkout(@GetCurrentUserId() userId: string, @Param('classId') classId: string){
         return await this.orderService.checkout(classId, userId);
+    }
+
+
+    @UseGuards(AuthGuard)
+    @Post()
+    async create(@GetCurrentUserId() userId: string, @Body() dto: CreateOrderDto){
+        return await this.orderService.create(dto, userId);
     }
 }
