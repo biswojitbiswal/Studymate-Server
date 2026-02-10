@@ -29,6 +29,7 @@ import { CommissionModule } from './commision/commission.module';
 import { TaxSettingModule } from './tax/tax-setting.module';
 import { CouponModule } from './coupon/coupon.module';
 import { OrderModule } from './order/order.module';
+import { PaymentModule } from './payment/payment.module';
 
 
 @Module({
@@ -58,7 +59,8 @@ import { OrderModule } from './order/order.module';
     CommissionModule,
     TaxSettingModule,
     CouponModule,
-    OrderModule
+    OrderModule,
+    PaymentModule
   ],
   providers: [
     {

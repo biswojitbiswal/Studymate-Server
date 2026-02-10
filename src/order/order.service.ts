@@ -6,10 +6,16 @@ import { CreateOrderDto } from "./dtos/order.dto";
 import { PrismaClient } from "@prisma/client/extension";
 import { Prisma } from "@prisma/client";
 import { CouponService } from "src/coupon/coupon.service";
+import { PaymentService } from "src/payment/payment.service";
 
 @Injectable({})
 export class OrderService {
-    constructor(private readonly prisma: PrismaService, private readonly coupon: CouponService) { }
+    constructor(
+        private readonly prisma: PrismaService, 
+        private readonly coupon: CouponService,
+        private readonly paymentService: PaymentService,
+        
+    ) { }
 
     async checkout(classId: string, userId: string) {
         try {
@@ -247,20 +253,9 @@ export class OrderService {
                     )
                 }
 
-                // Create Razorpay Order
-                // Create Transaction row
-                // Return payment config
-
-
-                //{
-                //   orderId,
-                //   razorpayOrderId,
-                //   amount,
-                //   currency,
-                //   keyId
-                // }
-
-                return order;
+                const payment = await this.paymentService.createRazorpayOrder(order.id, userId);
+                
+                return payment;
             });
 
         } catch (error) {
