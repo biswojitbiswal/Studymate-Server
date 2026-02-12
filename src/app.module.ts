@@ -30,6 +30,7 @@ import { TaxSettingModule } from './tax/tax-setting.module';
 import { CouponModule } from './coupon/coupon.module';
 import { OrderModule } from './order/order.module';
 import { PaymentModule } from './payment/payment.module';
+import { ClassEnrollmentModule } from './class-enrollment/class-enrollment.module';
 
 
 @Module({
@@ -60,7 +61,8 @@ import { PaymentModule } from './payment/payment.module';
     TaxSettingModule,
     CouponModule,
     OrderModule,
-    PaymentModule
+    PaymentModule,
+    ClassEnrollmentModule
   ],
   providers: [
     {

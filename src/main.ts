@@ -39,10 +39,8 @@ async function bootstrap() {
 
 
   app.use('/uploads', express.static(join(process.cwd(), 'public', 'uploads')));
-  // app.useStaticAssets(join(__dirname, '..', 'public', 'uploads'), {
-  //   prefix: '/uploads/',
-  // });
 
+  app.use('/payments/webhook', express.raw({ type: 'application/json' }));
 
 
   app.use(bodyParser.json({ limit: '25mb' }));

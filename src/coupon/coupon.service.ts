@@ -379,14 +379,14 @@ export class CouponService {
 
 
 
-    async redeemCouponAfterPayment(orderId: string) {
+    async redeemCouponAfterPayment(tx: Prisma.TransactionClient, orderId: string) {
         try {
-            const order = await this.prisma.order.findUnique({
+            const order = await tx.order.findUnique({
                 where: { id: orderId }
             })
             if (!order) throw new NotFoundException("Order not found");
 
-            const redeemedCoupon = await this.prisma.couponRedemption.findFirst({
+            const redeemedCoupon = await tx.couponRedemption.findFirst({
                 where: { orderId: order.id }
             })
             if (!redeemedCoupon) return;
@@ -395,7 +395,7 @@ export class CouponService {
                 return;
             }
 
-            await this.prisma.couponRedemption.update({
+            await tx.couponRedemption.update({
                 where: { id: redeemedCoupon.id },
                 data: {
                     status: RedeemedStatus.REDEEMED,
@@ -408,9 +408,9 @@ export class CouponService {
     }
 
 
-    async releaseCouponAfterFailure(orderId: string) {
+    async releaseCouponAfterFailure(tx: Prisma.TransactionClient, orderId: string) {
         try {
-            const order = await this.prisma.order.findUnique({
+            const order = await tx.order.findUnique({
                 where: { id: orderId },
                 include: { couponRedemption: true }
             });
@@ -428,7 +428,7 @@ export class CouponService {
                 return;
 
 
-            await this.prisma.couponRedemption.update({
+            await tx.couponRedemption.update({
                 where: { id: redemption.id },
                 data: {
                     status: RedeemedStatus.RELEASED
