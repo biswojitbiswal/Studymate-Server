@@ -20,7 +20,7 @@ export class PaymentController {
     @Public()
     @Post('webhook')
     async handleWebhook(
-        @Req() req: Request,
+        @Req() req: any,
         @Headers('x-razorpay-signature') signature: string,
     ){
         return await this.paymentService.handleWebhook(req.body, signature);

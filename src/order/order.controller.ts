@@ -13,16 +13,16 @@ import { CreateOrderDto } from "./dtos/order.dto";
 export class OrderController{
     constructor(private readonly orderService: OrderService){}
 
-    @UseGuards(AuthGuard)
-    @Get("checkout/:classId")
-    async checkout(@GetCurrentUserId() userId: string, @Param('classId') classId: string){
-        return await this.orderService.checkout(classId, userId);
-    }
-
 
     @UseGuards(AuthGuard)
     @Post()
     async create(@GetCurrentUserId() userId: string, @Body() dto: CreateOrderDto){
         return await this.orderService.create(dto, userId);
+    }
+
+    @UseGuards(AuthGuard)
+    @Get("checkout/:classId")
+    async checkout(@GetCurrentUserId() userId: string, @Param('classId') classId: string){
+        return await this.orderService.checkout(classId, userId);
     }
 }

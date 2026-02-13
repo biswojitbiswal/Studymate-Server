@@ -11,10 +11,10 @@ import { PaymentService } from "src/payment/payment.service";
 @Injectable({})
 export class OrderService {
     constructor(
-        private readonly prisma: PrismaService, 
+        private readonly prisma: PrismaService,
         private readonly coupon: CouponService,
         private readonly paymentService: PaymentService,
-        
+
     ) { }
 
     async checkout(classId: string, userId: string) {
@@ -142,7 +142,7 @@ export class OrderService {
 
     async create(dto: CreateOrderDto, userId: string) {
         try {
-            return await this.prisma.$transaction(async (tx) => {
+            const order = await this.prisma.$transaction(async (tx) => {
 
                 let klass: any;
 
@@ -224,12 +224,12 @@ export class OrderService {
                 const seq = await this.getNextOrderSequence(tx, year);
 
                 const padded = String(seq).padStart(4, '0');
-                const orderCode = `OD-${year}-${padded}`;
+                const orderCode = `SN-C-${year}-${padded}`;
 
 
                 /* -------- CREATE ORDER -------- */
 
-                const order = await tx.order.create({
+                const createdOrder = await tx.order.create({
                     data: {
                         userId,
                         orderNo: orderCode,
@@ -244,20 +244,21 @@ export class OrderService {
                     }
                 });
 
-                if (dto.couponCode) {
-                    await this.coupon.createCouponRemption(
-                        tx,
-                        userId,
-                        dto.couponCode,
-                        order.id
-                    )
-                }
 
-                const payment = await this.paymentService.createRazorpayOrder(order.id, userId);
-                
-                return payment;
+                return createdOrder;
             });
 
+            if (dto.couponCode) {
+                await this.coupon.createCouponRemption(
+                    userId,
+                    dto.couponCode,
+                    order.id
+                )
+            }
+
+            const payment = await this.paymentService.createRazorpayOrder(order.id, userId);
+
+            return payment;
         } catch (error) {
             throw error;
         }

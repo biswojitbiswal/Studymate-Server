@@ -27,14 +27,18 @@ export class PaymentService {
 
     async createRazorpayOrder(orderId: string, userId: string) {
         try {
+            console.log(orderId, " --------------");
+
             const order = await this.prisma.order.findUnique({
                 where: { id: orderId }
             })
+            console.log(order);
+
             if (!order) throw new NotFoundException("Order not found");
 
             if (order.status !== OrderStatus.PENDING) throw new BadRequestException("Order is not payable")
 
-            const amountInPaise = Math.round(order.taxAmount * 100);
+            const amountInPaise = Math.round(order.totalAmount * 100);
 
             const razorpayOrder = await this.razorpay.orders.create({
                 amount: amountInPaise,
@@ -103,69 +107,127 @@ export class PaymentService {
     }
 
 
-    async handleWebhook(body: any, signature: string) {
+    async handleWebhook(rawBody: Buffer, signature: string) {
+        const webhookSecret = this.config.get('RAZORPAY_WEBHOOK_SECRET');
+
+        if (!webhookSecret) {
+            console.error('RAZORPAY_WEBHOOK_SECRET missing');
+            return { received: true }; // never crash webhook
+        }
+
+
         try {
+            // 1️⃣ Verify signature
             const expectedSignature = crypto
-                .createHmac("sha256", this.config.getOrThrow<string>("RAZORPAY_WEBHOOK_SECRET"))
-                .update(JSON.stringify(body))
-                .digest("hex");
+                .createHmac('sha256', webhookSecret)
+                .update(rawBody)
+                .digest('hex');
 
             if (expectedSignature !== signature) {
-                throw new BadRequestException("Invalid payment signature");
+                console.log('❌ Invalid Razorpay signature');
+                return { received: true }; // NEVER throw
             }
 
-            const event = body.event;
+            // 2️⃣ Parse event
+            const event = JSON.parse(rawBody.toString());
 
-            if (event === "payment.captured") {
-                await this.handlePaymentSuccess(body);
+            console.log('WEBHOOK EVENT:', event.event);
+
+            const paymentEntity = event?.payload?.payment?.entity;
+
+            if (!paymentEntity) {
+                console.log('⚠️ No payment entity in webhook');
+                return { received: true };
+            }
+            console.log(paymentEntity);
+
+
+            const paymentId = paymentEntity.id;
+            const orderId = paymentEntity.order_id;
+
+            // 3️⃣ IDEMPOTENCY CHECK (VERY IMPORTANT)
+            const existingTransaction = await this.prisma.transaction.findFirst({
+                where: { providerPaymentId: paymentId },
+            });
+
+            if (existingTransaction) {
+                console.log('⚠️ Duplicate webhook ignored:', paymentId);
+                return { received: true };
+            }
+            console.log(existingTransaction);
+
+            // 4️⃣ Process event
+            switch (event.event) {
+                case 'payment.captured':
+                    await this.handlePaymentSuccess(paymentEntity);
+                    break;
+
+                case 'payment.failed':
+                    await this.handlePaymentFailed(paymentEntity);
+                    break;
+
+                default:
+                    console.log('Ignored event:', event.event);
             }
 
-            if (event === "payment.failed") {
-                await this.handlePaymentFailed(body);
-            }
-
-            return { status: "ok" };
+            return { received: true };
         } catch (error) {
-            throw error;
+            // VERY IMPORTANT
+            // NEVER allow webhook to crash
+            console.error('Webhook processing error:', error);
+            return { received: true };
         }
     }
 
 
 
-    async handlePaymentSuccess(payload: any) {
-        try {
-            const payment = payload.payload.payment.entity;
-            const razorpayOrderId = payment.order_id;
 
-            const transaction = await this.prisma.transaction.findFirst({
-                where: { providerOrderId: razorpayOrderId },
-                include: {
-                    order: true
+    async handlePaymentSuccess(payment: any) {
+        console.log("payment success webhook reached");
+
+        const razorpayOrderId = payment.order_id;
+        const razorpayPaymentId = payment.id;
+
+        const transaction = await this.prisma.transaction.findFirst({
+            where: { providerOrderId: razorpayOrderId },
+            include: { order: true }
+        });
+
+        if (!transaction) {
+            console.log("No transaction found for order:", razorpayOrderId);
+            return;
+        }
+
+        // already processed safety
+        if (transaction.status === PaymentStatus.SUCCESS) {
+            console.log("Transaction already processed");
+            return;
+        }
+
+        await this.prisma.$transaction(async (tx) => {
+
+            // store payment id (VERY IMPORTANT)
+            await tx.transaction.update({
+                where: { id: transaction.id },
+                data: {
+                    providerPaymentId: razorpayPaymentId,
+                    status: PaymentStatus.SUCCESS
                 }
-            })
-            if (!transaction) return;
+            });
 
-            await this.prisma.$transaction(async (tx) => {
-                if (transaction.status === PaymentStatus.SUCCESS) return;
+            await tx.order.update({
+                where: { id: transaction.orderId },
+                data: { status: OrderStatus.PAID }
+            });
 
-                await tx.transaction.update({
-                    where: { id: transaction.id },
-                    data: { status: PaymentStatus.SUCCESS }
-                })
+            await this.couponService.redeemCouponAfterPayment(tx, transaction.orderId);
 
-                await tx.order.update({
-                    where: { id: transaction.orderId },
-                    data: { status: OrderStatus.PAID }
-                })
+            await this.classEnrollmentService.createEnrollmentFromOrder(tx, transaction.orderId);
+        });
 
-                await this.couponService.redeemCouponAfterPayment(tx, transaction.orderId);
-
-                await this.classEnrollmentService.createEnrollmentFromOrder(tx, transaction.orderId);
-            })
-        } catch (error) {
-            throw error;
-        }
+        console.log("Order marked paid and enrollment created");
     }
+
 
 
     async handlePaymentFailed(payload: any) {

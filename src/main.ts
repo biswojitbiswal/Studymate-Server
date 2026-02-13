@@ -1,3 +1,4 @@
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { WINSTON_MODULE_PROVIDER, WinstonModule } from 'nest-winston';
@@ -15,17 +16,33 @@ import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
 
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: WinstonModule.createLogger({
       transports: Object.values(createWinstonTransports()),
     }),
   });
 
 
+  app.set('trust proxy', 1);
+
+
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://studynest-jade.vercel.app',
+  ];
+
   app.enableCors({
-    origin: true, // or specific domains
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   });
+
 
 
   // get logger instance (the same instance is injected into filters)
@@ -40,12 +57,14 @@ async function bootstrap() {
 
   app.use('/uploads', express.static(join(process.cwd(), 'public', 'uploads')));
 
-  app.use('/payments/webhook', express.raw({ type: 'application/json' }));
+  // Webhook route → RAW BODY ONLY
+  app.use('/api/v1/payments/webhook', bodyParser.raw({ type: '*/*' }));
 
-
+  // All other routes → normal JSON
   app.use(bodyParser.json({ limit: '25mb' }));
   app.use(bodyParser.urlencoded({ limit: '25mb', extended: true }));
   app.use(cookieParser());
+
 
 
   app.useGlobalPipes(
@@ -75,11 +94,12 @@ async function bootstrap() {
   // const mongoFilter = app.get(MongoExceptionFilter);
   // const allFilter = app.get(AllExceptionsFilter);
 
-  // // register filters in order (most specific -> general)
-  // app.useGlobalFilters(prismaFilter, mongoFilter, allFilter);
-  await app.listen(process.env.PORT ?? 3000);
-  winstonLogger.info(`StudyNest is running at ${process.env.PORT ?? 3000}`);
-  console.log(`StudyNest is running at ${process.env.PORT ?? 3000}`);
+  const port = Number(process.env.PORT) || 3000;
+  await app.listen(port, '0.0.0.0');
+
+  winstonLogger.info(`StudyNest is running on port ${port}`);
+  console.log(`StudyNest is running on port ${port}`);
+
 
 }
 bootstrap();

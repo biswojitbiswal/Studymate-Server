@@ -268,9 +268,9 @@ export class CouponService {
 
 
 
-    async createCouponRemption(tx: Prisma.TransactionClient, userId: string, code: string, orderId: string) {
+    async createCouponRemption(userId: string, code: string, orderId: string) {
         try {
-            const order = await tx.order.findUnique({
+            const order = await this.prisma.order.findUnique({
                 where: { id: orderId },
                 select: {
                     id: true,
@@ -287,11 +287,11 @@ export class CouponService {
                 throw new BadRequestException("Order is no longer payable");
             }
 
-
-            const coupon = await tx.coupon.findUnique({
+            
+            const coupon = await this.prisma.coupon.findUnique({
                 where: { code }
             });
-
+            
             if (!coupon || coupon.status !== 'ACTIVE')
                 throw new BadRequestException("Invalid coupon");
 
@@ -312,7 +312,7 @@ export class CouponService {
                 throw new BadRequestException("Coupon not valid for this class");
 
 
-            const usedCount = await tx.couponRedemption.count({
+            const usedCount = await this.prisma.couponRedemption.count({
                 where: {
                     couponId: coupon.id,
                     status: {
@@ -325,7 +325,7 @@ export class CouponService {
                 throw new BadRequestException("Coupon fully used");
 
 
-            const userUsed = await tx.couponRedemption.count({
+            const userUsed = await this.prisma.couponRedemption.count({
                 where: {
                     couponId: coupon.id,
                     userId,
@@ -352,7 +352,7 @@ export class CouponService {
             discount = Math.min(discount, basePrice);
 
 
-            const redemption = await tx.couponRedemption.create({
+            const redemption = await this.prisma.couponRedemption.create({
                 data: {
                     userId,
                     couponId: coupon.id,
@@ -362,7 +362,7 @@ export class CouponService {
                 }
             });
 
-            await tx.order.update({
+            await this.prisma.order.update({
                 where: { id: order.id },
                 data: {
                     couponId: coupon.id,
