@@ -32,14 +32,7 @@ async function bootstrap() {
   ];
 
   app.enableCors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+    origin: true,
     credentials: true,
   });
 
@@ -89,10 +82,6 @@ async function bootstrap() {
     type: VersioningType.URI
   })
 
-  // get the DI-created filter instances and register globally
-  // const prismaFilter = app.get(PrismaExceptionFilter);
-  // const mongoFilter = app.get(MongoExceptionFilter);
-  // const allFilter = app.get(AllExceptionsFilter);
 
   const port = process.env.PORT || 8080;
   await app.listen(port, '0.0.0.0');
