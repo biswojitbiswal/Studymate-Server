@@ -83,11 +83,16 @@ async function bootstrap() {
   })
 
 
-  const port = process.env.PORT || 8080;
+  const port = Number(process.env.PORT);
+
+  if (!port) {
+    throw new Error('PORT not found. Railway did not assign a port.');
+  }
+
   await app.listen(port, '0.0.0.0');
 
   winstonLogger.info(`StudyNest is running on port ${port}`);
-  console.log(`StudyNest is running on port ${port}`);
+  console.log(`🚀 StudyNest running on Railway port: ${port}`);
 
 
 }
