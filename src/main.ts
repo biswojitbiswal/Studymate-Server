@@ -94,7 +94,7 @@ async function bootstrap() {
   // const mongoFilter = app.get(MongoExceptionFilter);
   // const allFilter = app.get(AllExceptionsFilter);
 
-  const port = Number(process.env.PORT) || 3000;
+  const port = process.env.PORT || 8080;
   await app.listen(port, '0.0.0.0');
 
   winstonLogger.info(`StudyNest is running on port ${port}`);
