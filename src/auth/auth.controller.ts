@@ -43,8 +43,10 @@ export class AuthController {
       JSON.stringify({ userId: user.id, t: refreshToken }),
       {
         httpOnly: true,
-        secure: isProd,
-        sameSite: isProd ? 'none' : 'lax', // 🔑 KEY LINE
+        // secure: isProd,
+        // sameSite: isProd ? 'none' : 'lax', // 🔑 KEY LINE
+        secure: true,
+        sameSite: 'lax',
         path: '/',
         maxAge: 30 * 24 * 60 * 60 * 1000,
       },
@@ -85,8 +87,10 @@ export class AuthController {
       JSON.stringify({ userId: user.id, t: newRefresh }),
       {
         httpOnly: true,
-        secure: isProd,
-        sameSite: isProd ? 'none' : 'lax', // 🔑 KEY LINE
+        // secure: isProd,
+        // sameSite: isProd ? 'none' : 'lax', // 🔑 KEY LINE\
+        secure: true,
+        sameSite: 'lax',
         path: '/',
         maxAge: 30 * 24 * 60 * 60 * 1000,
       },

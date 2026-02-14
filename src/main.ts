@@ -21,9 +21,9 @@ async function bootstrap() {
       transports: Object.values(createWinstonTransports()),
     }),
   });
+  app.getHttpAdapter().getInstance().set('trust proxy', true);
 
-
-  app.set('trust proxy', 1);
+  // app.set('trust proxy', 1);
 
 
   const allowedOrigins = [
