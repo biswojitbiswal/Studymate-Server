@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Transform, Type } from 'class-transformer';
 import {
     IsString,
@@ -12,6 +13,7 @@ import {
     IsNumber,
     IsNotEmpty,
     IsIn,
+    ArrayMinSize,
 } from 'class-validator';
 import { ClassStatus, DayOfWeek, ClassType, ClassVisibility } from 'src/common/enums/tuition-class.enum';
 
@@ -46,22 +48,28 @@ export class CreateTuitionClassDto {
     @IsString()
     description: string;
 
-    /**
-     * Sent as JSON string from FormData
-     * Transform → real array
-     */
     @Transform(({ value }) => {
         if (!value) return [];
+
         if (Array.isArray(value)) return value;
 
         try {
-            return JSON.parse(value);
+            const parsed = JSON.parse(value);
+
+            if (!Array.isArray(parsed)) {
+                throw new BadRequestException('Syllabus must be an array');
+            }
+
+            return parsed;
         } catch {
-            throw new Error('Syllabus must be valid JSON');
+            throw new BadRequestException('Syllabus must be valid JSON array');
         }
     })
     @IsArray()
-    syllabus: any[];
+    // @ArrayMinSize(1)
+    @IsString({ each: true })
+    syllabus: string[];
+
 
     // ─────────────────────────
     // Class Nature

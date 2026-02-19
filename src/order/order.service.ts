@@ -2,11 +2,12 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { OrderStatus, ProductType } from "src/common/enums/order.enum";
 import { PriceOn, PriceType } from "src/common/enums/price.enum";
 import { PrismaService } from "src/prisma/prisma.service";
-import { CreateOrderDto } from "./dtos/order.dto";
+import { AdminOrderFilterDto, CreateOrderDto, OrderFilterDto } from "./dtos/order.dto";
 import { PrismaClient } from "@prisma/client/extension";
 import { Prisma } from "@prisma/client";
 import { CouponService } from "src/coupon/coupon.service";
 import { PaymentService } from "src/payment/payment.service";
+import { PaginationDto } from "common/dtos/pagination.dto";
 
 @Injectable({})
 export class OrderService {
@@ -264,4 +265,202 @@ export class OrderService {
         }
     }
 
+
+    async getStatus(orderId: string) {
+        try {
+            const order = await this.prisma.order.findUnique({
+                where: { id: orderId },
+                select: {
+                    id: true,
+                    status: true
+                }
+            })
+
+            if (!order) throw new BadRequestException("Something went wrong, Please try again");
+
+            return order;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+
+    async getAll(dto: AdminOrderFilterDto) {
+        try {
+            const page = dto.page ? Number(dto.page) : 1;
+            const limit = dto.limit ? Number(dto.limit) : 15;
+            const skip = (page - 1) * limit;
+
+
+            const where: Prisma.OrderWhereInput = {};
+
+            if (dto.status) {
+                where.status = dto.status;
+            }
+
+            if (dto.productType) {
+                where.productType = dto.productType;
+            }
+
+            if (dto.from || dto.to) {
+                where.createdAt = {};
+
+                if (dto.from) {
+                    where.createdAt.gte = new Date(dto.from);
+                }
+
+                if (dto.to) {
+                    const toDate = new Date(dto.to);
+                    toDate.setHours(23, 59, 59, 999);
+                    where.createdAt.lte = toDate;
+                }
+            }
+
+            if (dto.search) {
+                where.OR = [
+                    {
+                        orderNo: {
+                            contains: dto.search,
+                            mode: "insensitive",
+                        },
+                    },
+                    {
+                        user: {
+                            name: {
+                                contains: dto.search,
+                                mode: "insensitive",
+                            },
+                        },
+                    },
+                    {
+                        user: {
+                            email: {
+                                contains: dto.search,
+                                mode: "insensitive",
+                            },
+                        },
+                    },
+                    {
+                        transactions: {
+                            some: {
+                                providerPaymentId: {
+                                    contains: dto.search,
+                                    mode: "insensitive",
+                                },
+                            },
+                        },
+                    },
+                ];
+            }
+
+
+            const [orders, total] = await this.prisma.$transaction([
+
+                this.prisma.order.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy: {
+                        createdAt: "desc",
+                    },
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            },
+                        },
+                        transactions: true,
+                        couponRedemption: true,
+                    },
+                }),
+
+                this.prisma.order.count({ where }),
+            ]);
+
+
+            const revenue = await this.prisma.order.aggregate({
+                where: {
+                    status: OrderStatus.PAID,
+                    ...(where.createdAt ? { createdAt: where.createdAt } : {}),
+                },
+                _sum: {
+                    totalAmount: true,
+                },
+            });
+
+
+            return {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+                totalRevenue: revenue._sum.totalAmount ?? 0,
+                orders,
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+
+    async getMyOrders(dto: OrderFilterDto, userId: string) {
+        try {
+            const page = dto.page ? Number(dto.page) : 1;
+            const limit = dto.limit ? Number(dto.limit) : 10;
+            const skip = (page - 1) * limit;
+
+            let where: Prisma.OrderWhereInput = {
+                userId
+            };
+
+            if (dto.status) {
+                where.status = dto.status;
+            }
+
+            if (dto.productType) {
+                where.productType = dto.productType;
+            }
+
+            if (dto.search) {
+                where.OR = [
+                    {
+                        orderNo: {
+                            contains: dto.search,
+                            mode: "insensitive",
+                        },
+                    },
+                ];
+            }
+
+            const [orders, total] = await this.prisma.$transaction([
+                this.prisma.order.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy: {
+                        createdAt: "desc",
+                    },
+                    include: {
+                        transactions: true,
+                        couponRedemption: true,
+                    },
+                }),
+
+                this.prisma.order.count({ where }),
+            ]);
+
+
+            return {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+                orders
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
 }

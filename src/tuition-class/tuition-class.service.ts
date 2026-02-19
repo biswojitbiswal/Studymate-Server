@@ -6,6 +6,7 @@ import { CloudinaryService } from "src/cloudinary/cloudinary.service";
 import { ClassStatus, ClassType } from "src/common/enums/tuition-class.enum";
 import { slugify } from "src/common/utils/slugify.util";
 import { Prisma, TuitionClass } from "@prisma/client";
+import items from "razorpay/dist/types/items";
 
 @Injectable({})
 export class TuitionClassService {
@@ -16,6 +17,8 @@ export class TuitionClassService {
         previewImg?: Express.Multer.File[];
         previewVdo?: Express.Multer.File[];
     }) {
+        console.log(dto);
+        
         try {
             let previewImg: string | null = null;
             let previewVdo: string | null = null;
@@ -506,6 +509,24 @@ export class TuitionClassService {
                 this.prisma.tuitionClass.count({ where })
             ]);
 
+            // const classIds = classes.map(cls => cls.id);
+            // const enrollmentCounts = await this.prisma.classEnrollment.groupBy({
+            //     by: ['classId'],
+            //     where: {id: {in: classIds}},
+            //     _count: {classId: true}
+            // })
+            // console.log(enrollmentCounts);
+            
+            // const enrollmentMap = new Map(
+            //     enrollmentCounts.map(e => [e.classId, e._count.classId])
+            // )
+
+            // const data = classes.map(k => ({
+            //     ...k,
+            //     totalEnrollment: enrollmentMap.get(k.id) ?? 0
+            // }))
+            // console.log(data);
+            
             return {
                 page,
                 limit,
@@ -568,7 +589,15 @@ export class TuitionClassService {
                 if (klass.tutorId !== tutor.id) throw new ForbiddenException("You do not own this class.")
             }
 
-            return klass;
+            const totalEnrollment = await this.prisma.classEnrollment.count({
+                where: {
+                    classId: klass.id
+                }
+            })
+
+            
+
+            return {...klass, totalEnrollment};
         } catch (error) {
             throw error
         }
@@ -748,7 +777,7 @@ export class TuitionClassService {
             }
 
             /* ---------- Query ---------- */
-            const [items, total] = await Promise.all([
+            const [data, total] = await Promise.all([
                 this.prisma.tuitionClass.findMany({
                     where,
                     skip,
@@ -757,6 +786,7 @@ export class TuitionClassService {
                     select: {
                         id: true,
                         title: true,
+                        seo_name: true,
                         previewImg: true,
                         previewVdo: true,
                         price: true,
@@ -796,6 +826,23 @@ export class TuitionClassService {
                 this.prisma.tuitionClass.count({ where }),
             ]);
 
+            const classIds = data?.map(cls => cls.id);
+
+            const enrollmentCounts = await this.prisma.classEnrollment.groupBy({
+                by: ['classId'],
+                where: {id: {in: classIds}},
+                _count: {classId: true}
+            })
+
+            const enrollmentMap = new Map(
+                enrollmentCounts.map(e => [e.classId, e._count.classId])
+            )
+
+            const items = data.map(cls => ({
+                ...cls,
+                totalEnrollment: enrollmentMap.get(cls.id)
+            }))
+
             return {
                 data: {
                     total,
@@ -811,10 +858,10 @@ export class TuitionClassService {
     }
 
 
-    async getPublicById(classId: string) {
+    async getPublicById(seo_name: string) {
         try {
             const klass = await this.prisma.tuitionClass.findUnique({
-                where: { id: classId },
+                where: { seo_name },
                 select: {
                     id: true,
                     title: true,

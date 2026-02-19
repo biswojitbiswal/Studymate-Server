@@ -1,13 +1,12 @@
-Tuition Class:-
-    admin services
-    public services
-    crojob for-
-        updateClassesToActive
-        updateClassesToCompleted
-
-
-Session:- 
-    session apis
-    cronjob:-
-        create sessions for group class
+-Add validation and check the class capacity in every step for preventing race condition
+-Send totalenrollment per class and for a class
+-Send IsPurchased & isWishlisted for those who already loggedin
+-Discuss about the the checkout flow for tutor(should we give option & how to prevent)
+-Implement Session apis
+-Implement permission for join a meeting
+-Implement Wishlist
+-Implement the follow/unfollow functionality
+-Implement Rating/Reviews functionality
+-Implement the Invoice functionality
+-Implement the Assgned task module
 

@@ -19,8 +19,8 @@ export class PublicClassController {
 
     // // 8️⃣ Get public class by id
     @Public()
-    @Get(':classId')
-    async getPublicById(@Param('classId') classId: string) {
-        return await this.classservice.getPublicById(classId);
+    @Get(':seo_name')
+    async getPublicById(@Param('seo_name') seo_name: string) {
+        return await this.classservice.getPublicById(seo_name);
     }
 }

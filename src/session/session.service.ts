@@ -7,6 +7,7 @@ import { toMinutes } from "src/common/utils/time.util";
 import { Prisma, SessionStatus, SessionType } from "@prisma/client";
 import { SessionJob } from "./session.jobs";
 import { MeetingService } from "src/meeting/meeting.service";
+import { getSessionCalendarLabels, getSessionTimeLabel } from "common/utils/session.util";
 
 @Injectable({})
 export class SessionService {
@@ -304,14 +305,12 @@ export class SessionService {
                 throw new NotFoundException('Class not found');
             }
 
-            // If tutor
             if (user.role === 'TUTOR') {
                 if (klass.tutorId !== user.tutor?.id) {
                     throw new ForbiddenException('You do not own this class');
                 }
             }
 
-            // If student
             if (user.role === 'STUDENT') {
                 const enrolled = await this.prisma.classEnrollment.findFirst({
                     where: {
@@ -356,17 +355,57 @@ export class SessionService {
                 }
             }
 
-            const [items, total] = await Promise.all([
+            const [data, total] = await Promise.all([
                 this.prisma.session.findMany({
                     where,
+                    include: {
+                        klass: {
+                            select: {
+                                id: true,
+                                title: true,
+                                durationMin: true,
+                                startTime: true
+                            }
+                        },
+                    },
                     skip,
                     take: limit,
                     orderBy: {
-                        date: 'asc',
+                        date: 'desc',
                     },
                 }),
                 this.prisma.session.count({ where }),
             ]);
+
+            const totalEnrollment = await this.prisma.classEnrollment.count({
+                where: { classId: dto.classId }
+            })
+
+            const items = data.map(session => {
+                const calendar = getSessionCalendarLabels(session.date);
+                // const startTime = getSessionTimeLabel(session.klass.startTime);
+
+                return {
+                    id: session.id,
+                    classId: session.classId,
+                    status: session.status,
+                    sessionType: session.sessionType,
+                    createdBy: session.createdBy,
+                    meetingLink: session.meetingLink,
+
+                    date: session.date,
+                    klass: session.klass,
+
+                    monthLabel: calendar.monthLabel,
+                    dateLabel: calendar.dateLabel,
+                    dayLabel: calendar.dayLabel,
+
+                    // startTime,
+
+                    totalEnrollment,
+                };
+            });
+
 
             return {
                 page,
@@ -942,7 +981,7 @@ export class SessionService {
             const meeting = this.meetingService.createMeeting(session.id);
 
             return await this.prisma.session.update({
-                where: {id: session.id},
+                where: { id: session.id },
                 data: {
                     meetingLink: meeting.meetingLink
                 }
@@ -1082,7 +1121,7 @@ export class SessionService {
             const meeting = this.meetingService.createMeeting(session.id);
 
             return await this.prisma.session.update({
-                where: {id: session.id},
+                where: { id: session.id },
                 data: {
                     meetingLink: meeting.meetingLink
                 }
