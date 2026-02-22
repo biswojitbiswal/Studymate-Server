@@ -257,19 +257,36 @@ export class SessionService {
             // ─────────────────────────
             // Create session
             // ─────────────────────────
-            return await this.prisma.session.create({
-                data: {
-                    classId: klass.id,
-                    tutorId: tutor.id,
-                    studentId,
-                    date: requestedDate,
-                    startTime: dto.startTime,
-                    durationMin: dto.durationMin,
-                    sessionType: SessionType.REGULAR,
-                    status,
-                    createdBy,
-                },
+            const createdSession = await this.prisma.$transaction(async (tx) => {
+
+                const session = await tx.session.create({
+                    data: {
+                        classId: klass.id,
+                        tutorId: tutor.id,
+                        studentId,
+                        date: requestedDate,
+                        startTime: dto.startTime,
+                        durationMin: dto.durationMin,
+                        sessionType: SessionType.REGULAR,
+                        status,
+                        createdBy,
+                    },
+                });
+
+                let meetingLink: string | null = null;
+
+                if (createdBy === 'TUTOR') {
+                    const meeting = this.meetingService.createMeeting(session.id);
+                    meetingLink = meeting.meetingLink;
+                }
+
+                return tx.session.update({
+                    where: { id: session.id },
+                    data: { meetingLink },
+                });
             });
+
+            return createdSession;
         } catch (error) {
             throw error;
         }
@@ -364,7 +381,9 @@ export class SessionService {
                                 id: true,
                                 title: true,
                                 durationMin: true,
-                                startTime: true
+                                startTime: true,
+                                type: true,
+                                status: true,
                             }
                         },
                     },
@@ -392,6 +411,8 @@ export class SessionService {
                     sessionType: session.sessionType,
                     createdBy: session.createdBy,
                     meetingLink: session.meetingLink,
+                    durationMin: session.durationMin,
+                    startTime: session.startTime,
 
                     date: session.date,
                     klass: session.klass,
@@ -464,9 +485,9 @@ export class SessionService {
             }
 
             if (user.role === 'STUDENT') {
-                if (!user.student || session.studentId !== user.student.id) {
-                    throw new ForbiddenException('You do not own this session.');
-                }
+                // if (!user.student || session.studentId !== user.student.id) {
+                //     throw new ForbiddenException('You do not own this session.');
+                // }
 
                 if (session.klass.type === ClassType.GROUP) {
                     throw new BadRequestException(
@@ -676,13 +697,15 @@ export class SessionService {
             if (!session) {
                 throw new NotFoundException('Session not found');
             }
+            // console.log(session.studentId, user.student?.id);
+            
 
-            if (
-                user.role === 'STUDENT' &&
-                session.studentId !== user.student?.id
-            ) {
-                throw new ForbiddenException('You do not own this session');
-            }
+            // if (
+            //     user.role === 'STUDENT' &&
+            //     session.studentId !== user.student?.id
+            // ) {
+            //     throw new ForbiddenException('You do not own this session');
+            // }
 
             if (
                 user.role === 'TUTOR' &&

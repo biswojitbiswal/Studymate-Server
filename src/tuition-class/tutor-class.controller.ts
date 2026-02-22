@@ -55,9 +55,7 @@ export class TutorClassController {
     async publish(
         @Param('classId') classId: string,
         @GetCurrentUserId() userId: string,
-    ) {
-        console.log('entry');
-        
+    ) {        
         return await this.classservice.publish(classId, userId);
     }
 
@@ -68,9 +66,7 @@ export class TutorClassController {
     async archive(
         @Param('classId') classId: string,
         @GetCurrentUserId() userId: string,
-    ) {
-        console.log("Entry");
-        
+    ) {        
         return await this.classservice.archiveByTutor(classId, userId);
     }
 
@@ -100,7 +96,7 @@ export class TutorClassController {
     // 6️⃣ Get class by id (tutor view)
     @UseGuards(AuthGuard, RolesGuard)
     @Get(':classId')
-    @Roles('TUTOR','ADMIN')
+    @Roles('TUTOR', 'STUDENT', 'ADMIN')
     async getById(
         @Param('classId') classId: string,
         @GetCurrentUserId() userId: string,
