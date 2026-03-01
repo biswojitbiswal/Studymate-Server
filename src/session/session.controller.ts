@@ -3,7 +3,7 @@ import { SessionService } from "./session.service";
 import { RolesGuard } from "src/common/guards/roles.guard";
 import { Roles } from "src/common/decorator/roles.decorator";
 import { AuthGuard } from "src/common/guards/auth.guard";
-import { CreateGroupDboutSessionDto, CreateGroupExtraSessionDto, CreatePrivateSessionDto, GetClassSessionsDto, RescheduleSessionDto } from "./dtos/session.dto";
+import { CreateGroupDboutSessionDto, CreateGroupExtraSessionDto, CreatePrivateSessionDto, GetClassSessionsDto, RescheduleSessionDto, UpcomingSessionDto } from "./dtos/session.dto";
 import { GetCurrentUserId } from "src/common/decorator/get-current-user-id.decorator";
 
 @Controller({
@@ -82,8 +82,8 @@ export class SessionController {
     @UseGuards(AuthGuard, RolesGuard)
     @Get('upcoming')
     @Roles('TUTOR', 'STUDENT')
-    async getUpcomingSession(@GetCurrentUserId() userId: string) {
-        return await this.session.getUpcomingSession(userId)
+    async getUpcomingSession(@Query() dto: UpcomingSessionDto, @GetCurrentUserId() userId: string) {
+        return await this.session.getUpcomingSession(userId, dto.classId)
     }
 
 }

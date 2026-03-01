@@ -122,3 +122,10 @@ export class CreateGroupDboutSessionDto {
   @IsEnum(SessionType)
   sessionType: SessionType; // EXTRA | DBOUT
 }
+
+
+export class UpcomingSessionDto{
+  @IsOptional()
+  @IsString()
+  classId: string
+}

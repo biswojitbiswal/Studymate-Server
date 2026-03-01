@@ -118,7 +118,24 @@ export class ClassEnrollmentService {
                 skip,
                 take: limit,
                 orderBy: { createdAt: "desc" },
-                include: {
+                select: {
+                    id: true,
+                    title: true,
+                    startDate: true,
+                    endDate: true,
+                    startTime: true,
+                    type: true,
+                    visibility: true,
+                    previewImg: true,
+                    capacity: true,
+                    enrollments: {
+                        where: {
+                            studentId: student.id,
+                        },
+                        select: {
+                            enrolledAt: true
+                        }
+                    },
                     tutor: {
                         select: {
                             id: true,

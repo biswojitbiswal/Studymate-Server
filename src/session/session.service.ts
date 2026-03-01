@@ -698,7 +698,7 @@ export class SessionService {
                 throw new NotFoundException('Session not found');
             }
             // console.log(session.studentId, user.student?.id);
-            
+
 
             // if (
             //     user.role === 'STUDENT' &&
@@ -1170,8 +1170,10 @@ export class SessionService {
     }
 
 
-    async getUpcomingSession(userId: string) {
+    async getUpcomingSession(userId: string, classId?: string) {
         try {
+            console.log(classId);
+            
             const user = await this.prisma.user.findUnique({
                 where: { id: userId },
                 select: {
@@ -1182,24 +1184,47 @@ export class SessionService {
             });
 
             if (!user) {
-                throw new NotFoundException('User not found');
+                throw new NotFoundException("User not found");
             }
 
-            const now = new Date()
-            const today = new Date()
+            const now = new Date();
+            const today = new Date();
             today.setHours(0, 0, 0, 0);
 
+            const currentTimeString = now.toLocaleTimeString("en-GB", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+            });
+
             const where: Prisma.SessionWhereInput = {
-                date: { gte: today },
-                status: { in: ['SCHEDULED', 'PENDING_TUTOR_APPROVAL'] }
+                OR: [
+                    { date: { gt: today } },
+                    {
+                        date: today,
+                        startTime: { gt: currentTimeString },
+                    },
+                ],
+            };
+
+            // 🔹 Role filtering
+            if (user.role === "TUTOR") {
+                where.tutorId = user.tutor?.id;
             }
 
-            if (user.role === 'TUTOR') {
-                where.tutorId = user.tutor?.id
+            if (user.role === "STUDENT") {
+                const enrollments = await this.prisma.classEnrollment.findMany({
+                    where: { studentId: user.student?.id },
+                    select: { classId: true },
+                });
+
+                const classIds = enrollments.map((e) => e.classId);
+                where.classId = { in: classIds };
             }
 
-            if (user.role === 'STUDENT') {
-                where.studentId = user.student?.id
+            // 🔹 Optional single class filter
+            if (classId) {
+                where.classId = classId;
             }
 
             const sessions = await this.prisma.session.findMany({
@@ -1209,27 +1234,60 @@ export class SessionService {
                         select: {
                             id: true,
                             title: true,
+                            durationMin: true,
+                            startTime: true,
                             type: true,
+                            status: true,
                         },
                     },
                 },
+                take: 3,
                 orderBy: [
-                    { date: 'asc' },
-                    { startTime: 'asc' },
+                    { date: "asc" },
+                    { startTime: "asc" },
                 ],
             });
 
-            const upcoming = sessions.filter((session) => {
-                const sessionStart = this.buildSessionStart(
-                    session.date,
-                    session.startTime,
-                );
-                return sessionStart > now;
+            // // 🔹 Collect classIds for enrollment count
+            // const classIds = [...new Set(sessions.map(s => s.classId))];
+
+            // const enrollmentCounts = await this.prisma.classEnrollment.groupBy({
+            //     by: ["classId"],
+            //     where: { classId: { in: classIds } },
+            //     _count: { classId: true },
+            // });
+
+            // const enrollmentMap = new Map(
+            //     enrollmentCounts.map(e => [e.classId, e._count.classId])
+            // );
+
+            const items = sessions.map(session => {
+                const calendar = getSessionCalendarLabels(session.date);
+
+                return {
+                    id: session.id,
+                    classId: session.classId,
+                    status: session.status,
+                    sessionType: session.sessionType,
+                    createdBy: session.createdBy,
+                    meetingLink: session.meetingLink,
+                    durationMin: session.durationMin,
+                    startTime: session.startTime,
+
+                    date: session.date,
+                    klass: session.klass,
+
+                    monthLabel: calendar.monthLabel,
+                    dateLabel: calendar.dateLabel,
+                    dayLabel: calendar.dayLabel,
+
+                    // totalEnrollment: enrollmentMap.get(session.classId) ?? 0,
+                };
             });
 
-            return upcoming;
+            return items;
         } catch (error) {
-            throw error
+            throw error;
         }
     }
 }
