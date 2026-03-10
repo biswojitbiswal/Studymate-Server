@@ -8,6 +8,7 @@ import { Prisma, SessionStatus, SessionType } from "@prisma/client";
 import { SessionJob } from "./session.jobs";
 import { MeetingService } from "src/meeting/meeting.service";
 import { getSessionCalendarLabels, getSessionTimeLabel } from "common/utils/session.util";
+import { use } from "passport";
 
 @Injectable({})
 export class SessionService {
@@ -697,7 +698,6 @@ export class SessionService {
             if (!session) {
                 throw new NotFoundException('Session not found');
             }
-            // console.log(session.studentId, user.student?.id);
 
 
             // if (
@@ -870,8 +870,6 @@ export class SessionService {
             throw error;
         }
     }
-
-
 
 
     async createExtraSession(
@@ -1172,8 +1170,6 @@ export class SessionService {
 
     async getUpcomingSession(userId: string, classId?: string) {
         try {
-            console.log(classId);
-            
             const user = await this.prisma.user.findUnique({
                 where: { id: userId },
                 select: {
@@ -1288,6 +1284,83 @@ export class SessionService {
             return items;
         } catch (error) {
             throw error;
+        }
+    }
+
+
+    async getMeetingLink(sessionId: string, userId: string) {
+        try {
+            const user = await this.prisma.user.findUnique({
+                where: { id: userId },
+                select: {
+                    id: true,
+                    role: true,
+                    tutor: { select: { id: true } },
+                    student: { select: { id: true } }
+                }
+            })
+
+            const session = await this.prisma.session.findUnique({
+                where: { id: sessionId },
+                select: {
+                    id: true,
+                    meetingLink: true,
+                    startTime: true,
+                    durationMin: true,
+                    klass: {
+                        select: {
+                            id: true,
+                            tutorId: true
+                        }
+                    }
+                }
+            })
+
+            if (!session) throw new NotFoundException("Session not found")
+
+            if (user?.role === 'TUTOR') {
+                if (session.klass.tutorId !== user?.tutor?.id) {
+                    throw new ForbiddenException("You don't own this class")
+                }
+            }
+
+            if (user?.role === 'STUDENT') {
+                if (!user.student) {
+                    throw new ForbiddenException("Student profile not found")
+                }
+
+                const enrolled = await this.prisma.classEnrollment.findUnique({
+                    where: {
+                        classId_studentId: {
+                            classId: session.klass.id,
+                            studentId: user.student.id
+                        }
+                    }
+                })
+
+                if (!enrolled) {
+                    throw new ForbiddenException("You are not enrolled in this class")
+                }
+            }
+
+            const now = new Date()
+
+            const [hours, minutes] = session.startTime.split(":").map(Number)
+
+            const sessionStart = new Date()
+            sessionStart.setHours(hours, minutes, 0, 0)
+
+            const allowJoinFrom = new Date(sessionStart.getTime() - 10 * 60 * 1000)
+
+            if (now < allowJoinFrom) {
+                throw new ForbiddenException("Session has not started yet")
+            }
+
+            return {
+                meetingLink: session.meetingLink
+            }
+        } catch (error) {
+
         }
     }
 }

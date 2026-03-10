@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Matches, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Matches, Min } from 'class-validator';
 import { DayOfWeek } from '@prisma/client';
 import { Type } from 'class-transformer';
 
@@ -75,4 +75,10 @@ export class TutorAvailabilityFilterDto {
   @IsOptional()
   @IsString()
   sortOrder?: 'asc' | 'desc';
+}
+
+
+export class TutorAvailabilityForDayDto {
+  @IsDateString()
+  date: string;
 }

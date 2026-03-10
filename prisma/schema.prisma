@@ -454,11 +454,11 @@ model TuitionClass{
   language                Language?                   @relation(fields: [languageId], references: [id])
   enrollments             ClassEnrollment[]
   sessions                Session[]
+  resources               Resource[]
 
   @@index([tutorId])
   @@index([type, status])
 }
-
 
 
 model ClassEnrollment {
@@ -551,6 +551,37 @@ model Attendance{
 
   @@unique([sessionId, studentId])
   @@index([studentId])
+}
+
+
+enum FileType {
+  PDF
+  VIDEO
+  IMAGE
+  DOC
+  PPT
+  OTHER
+}
+
+model Resource{
+  id                    String              @id @default(auto()) @map("_id") @db.ObjectId
+
+  title                 String
+  seo_name              String              @unique
+  description           String?
+
+  classId               String              @db.ObjectId
+  klass                 TuitionClass        @relation(fields: [classId], references:[id])
+
+  type                  FileType
+  size                  Int
+
+  fileUrl               String
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([classId])
 }
 
 

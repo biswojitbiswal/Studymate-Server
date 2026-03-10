@@ -11,9 +11,7 @@ export class TaskService {
 
 
     async create(dto: TaskDto, userId: string) {
-        try {
-            console.log(userId);
-            
+        try {            
             const student = await this.prisma.student.findUnique({
                 where: { userId }
             })
@@ -40,7 +38,6 @@ export class TaskService {
     async getAll(dto: TaskFilterDto, userId: string) {
         try {
             const { page, limit, search, status, date, range } = dto
-            console.log(dto);
 
             const student = await this.prisma.student.findUnique({
                 where: { userId }

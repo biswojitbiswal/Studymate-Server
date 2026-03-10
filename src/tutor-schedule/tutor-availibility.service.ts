@@ -1,9 +1,12 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
 import { CreateTutorAvailabilityDto, TutorAvailabilityFilterDto, UpdateTutorAvailabilityDto } from "./dtos/tutor-availibility.dto";
-import { toMinutes } from "src/common/utils/time.util";
+import { toMinutes, toTime } from "src/common/utils/time.util";
 import { Prisma } from "@prisma/client";
 import { getDayFromDate } from "src/common/utils/dayofweek.util";
+import { DayOfWeek } from "common/enums/tuition-class.enum";
+import { start } from "repl";
+
 
 @Injectable({})
 export class TutorAvailibilityService {
@@ -182,7 +185,7 @@ export class TutorAvailibilityService {
                 );
             }
         }
- 
+
         const sessions = await this.prisma.session.findMany({
             where: {
                 tutorId: tutor.id,
@@ -270,7 +273,147 @@ export class TutorAvailibilityService {
     }
 
 
+    private async getDayFromDate(dateString: string) {
+        const date = new Date(dateString)
+
+        const days = [
+            'SUN',
+            'MON',
+            'TUE',
+            'WED',
+            'THU',
+            'FRI',
+            'SAT'
+        ]
+
+        return days[date.getDay()] as DayOfWeek
+    }
+
+
     // TODO: Add service where we will calculate and return free or bookable slot for student in a particular date...
-    
+    async getFreeAvailibility(tutorId: string, date: string) {
+        try {
+            const tutor = await this.prisma.tutor.findUnique({
+                where: { id: tutorId },
+                select: {
+                    id: true
+                }
+            })
+            if (!tutor) throw new NotFoundException("Tutor account not found");
+
+            const dateString = new Date(date);
+            dateString.setHours(0, 0, 0, 0)
+
+            const leave = await this.prisma.tutorLeave.findFirst({
+                where: {
+                    tutorId: tutor.id,
+                    startDate: { lte: dateString },
+                    endDate: { gte: dateString }
+                }
+            })
+
+            if (leave) {
+                return { date, slots: [] }
+            }
+
+            const day = getDayFromDate(date);
+
+            const availibilities = await this.prisma.tutorAvailability.findMany({
+                where: {
+                    tutorId: tutor.id,
+                    dayOfWeek: day,
+                    isActive: true
+                },
+                select: {
+                    id: true,
+                    startTime: true,
+                    endTime: true
+                },
+            })
+
+            if (!availibilities.length) {
+                return { date, slots: [] }
+            }
+
+            const sessions = await this.prisma.session.findMany({
+                where: {
+                    tutorId: tutor.id,
+                    date: dateString
+                },
+                select: {
+                    id: true,
+                    date: true,
+                    startTime: true,
+                    durationMin: true,
+                },
+            })
+
+
+            const timeOffs = await this.prisma.tutorTimeOff.findMany({
+                where: {
+                    tutorId: tutor.id,
+                    date: dateString
+                },
+                select: {
+                    id: true,
+                    date: true,
+                    startTime: true,
+                    endTime: true
+                }
+            })
+
+            const sessionBlocks = sessions.map(session => ({
+                start: toMinutes(session.startTime),
+                end: toMinutes(session.startTime) + session.durationMin
+            }))
+
+            const timeOffBlocks = timeOffs.map(tf => ({
+                start: toMinutes(tf.startTime),
+                end: toMinutes(tf.endTime)
+            }))
+
+            const blocks = [...sessionBlocks, ...timeOffBlocks];
+            blocks.sort((a, b) => a.start - b.start);
+
+            const availibilityBlocks = availibilities.map(avail => ({
+                start: toMinutes(avail.startTime),
+                end: toMinutes(avail.endTime)
+            }))
+            availibilityBlocks.sort((a, b) => a.start - b.start);
+
+            const slots = [] as any;
+            for (const availibility of availibilityBlocks) {
+                let cursor = availibility.start;
+
+                for (const block of blocks) {
+                    if (block.end <= availibility.start) continue;
+
+                    if (block.start >= availibility.end) break;
+
+                    if (block.start > cursor) {
+                        slots.push({
+                            startTime: toTime(cursor),
+                            endTime: toTime(block.start)
+                        });
+                    }
+
+                    cursor = Math.max(cursor, block.end);
+                }
+                if (availibility.end > cursor) {
+                    slots.push({
+                        startTime: toTime(cursor),
+                        endTime: toTime(availibility.end)
+                    });
+                }
+            }
+
+            return {
+                date,
+                slots
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
 
 }

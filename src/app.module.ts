@@ -31,6 +31,8 @@ import { CouponModule } from './coupon/coupon.module';
 import { OrderModule } from './order/order.module';
 import { PaymentModule } from './payment/payment.module';
 import { ClassEnrollmentModule } from './class-enrollment/class-enrollment.module';
+import { ResourceModule } from 'resources/resources.module';
+import { AssignmentModule } from 'assignments/assignment.module';
 
 
 @Module({
@@ -62,7 +64,9 @@ import { ClassEnrollmentModule } from './class-enrollment/class-enrollment.modul
     CouponModule,
     OrderModule,
     PaymentModule,
-    ClassEnrollmentModule
+    ClassEnrollmentModule,
+    AssignmentModule,
+    ResourceModule,
   ],
   providers: [
     {

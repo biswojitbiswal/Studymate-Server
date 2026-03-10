@@ -86,4 +86,11 @@ export class SessionController {
         return await this.session.getUpcomingSession(userId, dto.classId)
     }
 
+
+    @UseGuards(AuthGuard, RolesGuard)
+    @Get(':sessionId/join')
+    @Roles('TUTOR', 'STUDENT')
+    async getMeetingLink(@Param('sessionId') sessionId: string, @GetCurrentUserId() userId: string) {
+        return await this.session.getMeetingLink(sessionId, userId)
+    }
 }

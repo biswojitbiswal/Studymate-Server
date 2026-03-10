@@ -16,9 +16,7 @@ export class TuitionClassService {
     async create(dto: CreateTuitionClassDto, userId: string, files: {
         previewImg?: Express.Multer.File[];
         previewVdo?: Express.Multer.File[];
-    }) {
-        console.log(dto);
-        
+    }) {        
         try {
             let previewImg: string | null = null;
             let previewVdo: string | null = null;

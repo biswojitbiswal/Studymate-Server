@@ -3,7 +3,7 @@ import { TutorAvailibilityService } from "./tutor-availibility.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { RolesGuard } from "src/common/guards/roles.guard";
 import { Roles } from "src/common/decorator/roles.decorator";
-import { CreateTutorAvailabilityDto, TutorAvailabilityFilterDto, UpdateTutorAvailabilityDto } from "./dtos/tutor-availibility.dto";
+import { CreateTutorAvailabilityDto, TutorAvailabilityFilterDto, TutorAvailabilityForDayDto, UpdateTutorAvailabilityDto } from "./dtos/tutor-availibility.dto";
 import { GetCurrentUserId } from "src/common/decorator/get-current-user-id.decorator";
 import { CreateTutorTimeOffDto, TutorTimeOffFilterDto } from "./dtos/tutor-timeoff.dto";
 import { TutorTimeoffService } from "./tutor-timeoff.service";
@@ -49,6 +49,14 @@ export class TutorScheduleController{
     @Get('availibility')
     @Roles('TUTOR')
     async getAll(@Query() dto: TutorAvailabilityFilterDto, @GetCurrentUserId() userId: string){
+        return await this.availibility.getAll(dto, userId)
+    }
+
+
+    @UseGuards(AuthGuard, RolesGuard)
+    @Get('availibility')
+    @Roles('STUDENT', 'TUTOR')
+    async getForSessionBooking(@Query() dto: TutorAvailabilityFilterDto, @GetCurrentUserId() userId: string){
         return await this.availibility.getAll(dto, userId)
     }
 
@@ -106,5 +114,13 @@ export class TutorScheduleController{
     @Roles('TUTOR')
     async update(@Body() dto: UpdateTutorAvailabilityDto, @Param('id') id: string, @GetCurrentUserId() userId: string){
         return await this.availibility.update(id, dto, userId)
+    }
+
+
+    @UseGuards(AuthGuard, RolesGuard)
+    @Get('tutors/:tutorId/availibility')
+    @Roles('TUTOR', 'STUDENT')
+    async getFreeAvailibility(@Param('tutorId') tutorId: string, @Query() dto: TutorAvailabilityForDayDto){
+        return await this.availibility.getFreeAvailibility(tutorId, dto.date)
     }
 }
