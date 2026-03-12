@@ -1,5 +1,5 @@
 import { PriceOn } from "@prisma/client"
-import { Type } from "class-transformer"
+import { Transform, Type } from "class-transformer"
 import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min } from "class-validator"
 import { OrderStatus, ProductType } from "common/enums/order.enum"
 
@@ -37,6 +37,7 @@ export class OrderFilterDto {
     search?: string;
 
     @IsOptional()
+    @Transform(({ value }) => (value === "ALL" ? undefined : value))
     @IsEnum(OrderStatus)
     status?: OrderStatus;
 

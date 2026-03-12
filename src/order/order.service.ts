@@ -442,15 +442,10 @@ export class OrderService {
                     orderBy: {
                         createdAt: "desc",
                     },
-                    include: {
-                        transactions: true,
-                        couponRedemption: true,
-                    },
                 }),
 
                 this.prisma.order.count({ where }),
             ]);
-
 
             return {
                 total,
@@ -462,5 +457,52 @@ export class OrderService {
         } catch (error) {
             throw error;
         }
+    }
+
+
+    async getById(orderId: string, userId: string) {
+
+        const order = await this.prisma.order.findFirst({
+            where: {
+                id: orderId,
+                userId
+            },
+            include: {
+                transactions: true,
+                couponRedemption: true,
+            }
+        });
+
+        if (!order) {
+            throw new NotFoundException("Order not found");
+        }
+
+        let product = {} as any;
+
+        // if (order.productType === "COURSE") {
+        //     product = await this.prisma.course.findUnique({
+        //         where: { id: order.productId },
+        //         select: {
+        //             id: true,
+        //             title: true,
+        //             thumbnail: true
+        //         }
+        //     });
+        // }
+
+        if (order.productType === "CLASS") {
+            product = await this.prisma.tuitionClass.findUnique({
+                where: { id: order.productId },
+                select: {
+                    id: true,
+                    title: true
+                }
+            });
+        }
+
+        return {
+            ...order,
+            product
+        };
     }
 }

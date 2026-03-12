@@ -49,4 +49,11 @@ export class OrderController{
     async getStatus(@Param('orderId') orderId: string){
         return await this.orderService.getStatus(orderId)
     }
+
+
+    @UseGuards(AuthGuard)
+    @Get(":orderId")
+    async getById(@Param('orderId') orderId: string, @GetCurrentUserId() userId: string){
+        return await this.orderService.getById(orderId, userId)
+    }
 }

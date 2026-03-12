@@ -290,7 +290,6 @@ export class TutorAvailibilityService {
     }
 
 
-    // TODO: Add service where we will calculate and return free or bookable slot for student in a particular date...
     async getFreeAvailibility(tutorId: string, date: string) {
         try {
             const tutor = await this.prisma.tutor.findUnique({

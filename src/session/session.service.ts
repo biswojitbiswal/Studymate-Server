@@ -376,7 +376,16 @@ export class SessionService {
             const [data, total] = await Promise.all([
                 this.prisma.session.findMany({
                     where,
-                    include: {
+                    select: {
+                        id: true,
+                        classId: true,
+                        date: true,
+                        startTime: true,
+                        createdBy: true,
+                        durationMin: true,
+                        createdAt: true,
+                        status: true,
+                        sessionType: true,
                         klass: {
                             select: {
                                 id: true,
@@ -411,7 +420,6 @@ export class SessionService {
                     status: session.status,
                     sessionType: session.sessionType,
                     createdBy: session.createdBy,
-                    meetingLink: session.meetingLink,
                     durationMin: session.durationMin,
                     startTime: session.startTime,
 
@@ -1266,7 +1274,6 @@ export class SessionService {
                     status: session.status,
                     sessionType: session.sessionType,
                     createdBy: session.createdBy,
-                    meetingLink: session.meetingLink,
                     durationMin: session.durationMin,
                     startTime: session.startTime,
 
@@ -1304,6 +1311,7 @@ export class SessionService {
                 where: { id: sessionId },
                 select: {
                     id: true,
+                    date: true,
                     meetingLink: true,
                     startTime: true,
                     durationMin: true,
@@ -1318,6 +1326,8 @@ export class SessionService {
 
             if (!session) throw new NotFoundException("Session not found")
 
+            // ---------- Authorization ----------
+
             if (user?.role === 'TUTOR') {
                 if (session.klass.tutorId !== user?.tutor?.id) {
                     throw new ForbiddenException("You don't own this class")
@@ -1325,6 +1335,7 @@ export class SessionService {
             }
 
             if (user?.role === 'STUDENT') {
+
                 if (!user.student) {
                     throw new ForbiddenException("Student profile not found")
                 }
@@ -1343,24 +1354,31 @@ export class SessionService {
                 }
             }
 
+            // ---------- Time Logic ----------
+
             const now = new Date()
 
             const [hours, minutes] = session.startTime.split(":").map(Number)
 
-            const sessionStart = new Date()
+            const sessionStart = new Date(session.date)
             sessionStart.setHours(hours, minutes, 0, 0)
 
             const allowJoinFrom = new Date(sessionStart.getTime() - 10 * 60 * 1000)
 
+            // console.log("Now:", now)
+            // console.log("Session Start:", sessionStart)
+            // console.log("Allow Join From:", allowJoinFrom)
+
             if (now < allowJoinFrom) {
-                throw new ForbiddenException("Session has not started yet")
+                throw new ForbiddenException("You can join only 10 minutes before the session starts")
             }
 
             return {
                 meetingLink: session.meetingLink
             }
-        } catch (error) {
 
+        } catch (error) {
+            throw error
         }
     }
 }
