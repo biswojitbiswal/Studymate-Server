@@ -86,6 +86,7 @@ model Student{
   tasks                   Task[]
   enrollments             ClassEnrollment[]
   attendances             Attendance[]
+  reviews                 Review[]
 }
 
 enum TutorStatus {
@@ -120,6 +121,7 @@ model Tutor{
   updatedAt               DateTime                  @updatedAt
 
   classes                 TuitionClass[]
+  reviews                 Review[]
 }
 
 
@@ -455,6 +457,7 @@ model TuitionClass{
   enrollments             ClassEnrollment[]
   sessions                Session[]
   resources               Resource[]
+  reviews                 Review[]
 
   @@index([tutorId])
   @@index([type, status])
@@ -837,3 +840,24 @@ model Transaction {
   @@index([providerPaymentId])
 }
 
+
+
+model Review {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+
+  studentId     String   @db.ObjectId
+  tutorId       String   @db.ObjectId
+  klassId       String   @db.ObjectId
+  enrollmentId  String   @unique @db.ObjectId
+
+  status        Status   @default(INACTIVE)
+
+  rating        Int
+  reviewText    String?
+
+  tutor         Tutor         @relation(fields: [tutorId], references: [id])
+  student       Student       @relation(fields: [studentId], references: [id])
+  klass         TuitionClass  @relation(fields: [klassId], references: [id])
+
+  createdAt     DateTime @default(now())
+}
