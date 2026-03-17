@@ -66,6 +66,7 @@ export class AdminOrderFilterDto {
     search?: string;
 
     @IsOptional()
+    @Transform(({ value }) => (value === "ALL" ? undefined : value))
     @IsEnum(OrderStatus)
     status?: OrderStatus;
 

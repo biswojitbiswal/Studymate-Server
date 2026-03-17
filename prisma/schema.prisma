@@ -55,6 +55,7 @@ model User {
 
   orders                  Order[]
   transactions            Transaction[]
+  wishlists               Wishlist[]
 
 
   createdAt               DateTime                  @default(now())
@@ -459,6 +460,9 @@ model TuitionClass{
   resources               Resource[]
   reviews                 Review[]
 
+  wishlists               Wishlist[]
+  reviews                 Review[]
+
   @@index([tutorId])
   @@index([type, status])
 }
@@ -860,4 +864,17 @@ model Review {
   klass         TuitionClass  @relation(fields: [klassId], references: [id])
 
   createdAt     DateTime @default(now())
+}
+model Wishlist {
+  id                    String          @id @default(auto()) @map("_id") @db.ObjectId
+
+  userId                String          @db.ObjectId
+  productId             String          @db.ObjectId
+
+  user                  User            @relation(fields: [userId], references: [id])
+  product               TuitionClass    @relation(fields: [productId], references: [id])
+
+  createdAt             DateTime        @default(now())
+
+  @@unique([userId, productId])
 }

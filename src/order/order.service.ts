@@ -291,16 +291,11 @@ export class OrderService {
             const limit = dto.limit ? Number(dto.limit) : 15;
             const skip = (page - 1) * limit;
 
-
             const where: Prisma.OrderWhereInput = {};
 
-            if (dto.status) {
-                where.status = dto.status;
-            }
+            if (dto.status) where.status = dto.status;
 
-            if (dto.productType) {
-                where.productType = dto.productType;
-            }
+            if (dto.productType) where.productType = dto.productType;
 
             if (dto.from || dto.to) {
                 where.createdAt = {};
@@ -353,22 +348,19 @@ export class OrderService {
                 ];
             }
 
-
             const [orders, total] = await this.prisma.$transaction([
-
                 this.prisma.order.findMany({
                     where,
                     skip,
                     take: limit,
-                    orderBy: {
-                        createdAt: "desc",
-                    },
+                    orderBy: { createdAt: "desc" },
                     include: {
                         user: {
                             select: {
                                 id: true,
                                 name: true,
                                 email: true,
+                                avatar: true,
                             },
                         },
                         transactions: true,
@@ -379,25 +371,83 @@ export class OrderService {
                 this.prisma.order.count({ where }),
             ]);
 
+            /**
+             * -------------------------
+             * Fetch Products
+             * -------------------------
+             */
 
-            const revenue = await this.prisma.order.aggregate({
-                where: {
-                    status: OrderStatus.PAID,
-                    ...(where.createdAt ? { createdAt: where.createdAt } : {}),
-                },
-                _sum: {
-                    totalAmount: true,
-                },
+            const classIds = orders
+                .filter((o) => o.productType === "CLASS")
+                .map((o) => o.productId);
+
+            let classes = [] as any;
+
+            if (classIds.length > 0) {
+                classes = await this.prisma.tuitionClass.findMany({
+                    where: {
+                        id: { in: classIds },
+                    },
+                    select: {
+                        id: true,
+                        title: true,
+                        previewImg: true,
+                        tutor: {
+                            select: {
+                                id: true,
+                                user: {
+                                    select: {
+                                        name: true,
+                                        avatar: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                });
+            }
+
+            const classMap = new Map(classes.map((c) => [c.id, c]));
+
+            /**
+             * Attach product to order
+             */
+
+            const enrichedOrders = orders.map((order) => {
+                let product = {} as any;
+
+                if (order.productType === "CLASS") {
+                    product = classMap.get(order.productId) || null;
+                }
+
+                return {
+                    ...order,
+                    product,
+                };
             });
 
+            /**
+             * -------------------------
+             * Revenue
+             * -------------------------
+             */
+
+            // const revenue = await this.prisma.order.aggregate({
+            //     where: {
+            //         status: OrderStatus.PAID,
+            //         ...(where.createdAt ? { createdAt: where.createdAt } : {}),
+            //     },
+            //     _sum: {
+            //         totalAmount: true,
+            //     },
+            // });
 
             return {
                 total,
                 page,
                 limit,
                 totalPages: Math.ceil(total / limit),
-                totalRevenue: revenue._sum.totalAmount ?? 0,
-                orders,
+                orders: enrichedOrders,
             };
         } catch (error) {
             throw error;
@@ -465,11 +515,11 @@ export class OrderService {
         const order = await this.prisma.order.findFirst({
             where: {
                 id: orderId,
-                userId
             },
             include: {
                 transactions: true,
                 couponRedemption: true,
+                user: true
             }
         });
 
@@ -495,14 +545,36 @@ export class OrderService {
                 where: { id: order.productId },
                 select: {
                     id: true,
-                    title: true
+                    title: true,
+                    previewImg: true,
+                    tutor: {
+                        select: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    avatar: true,
+                                    email: true
+                                }
+                            }
+                        }
+                    }
                 }
             });
         }
 
+        let coupon = {} as any;
+
+        if(order.couponId){
+            coupon = await this.prisma.coupon.findUnique({
+                where: {id: order.couponId}
+            })
+        }
+
         return {
             ...order,
-            product
+            product,
+            coupon
         };
     }
 }
