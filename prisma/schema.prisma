@@ -461,7 +461,6 @@ model TuitionClass{
   reviews                 Review[]
 
   wishlists               Wishlist[]
-  reviews                 Review[]
 
   @@index([tutorId])
   @@index([type, status])
@@ -863,8 +862,10 @@ model Review {
   student       Student       @relation(fields: [studentId], references: [id])
   klass         TuitionClass  @relation(fields: [klassId], references: [id])
 
-  createdAt     DateTime @default(now())
+  createdAt     DateTime      @default(now())
 }
+
+
 model Wishlist {
   id                    String          @id @default(auto()) @map("_id") @db.ObjectId
 

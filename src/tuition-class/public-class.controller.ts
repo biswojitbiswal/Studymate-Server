@@ -1,7 +1,9 @@
-import { Controller, Get, Param, Query } from "@nestjs/common";
+import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
 import { TuitionClassService } from "./tuition-class.service";
 import { BrowseClassFilterDto } from "./dtos/tuition-class.dto";
 import { Public } from "src/common/decorator/public.decorator";
+import { GetCurrentUserId } from "common/decorator/get-current-user-id.decorator";
+import { OptionalJwtAuthGuard } from "common/guards/optionaljwt.guard";
 
 @Controller({
     path: "public/classes",
@@ -12,15 +14,17 @@ export class PublicClassController {
 
     // 7️⃣ Browse classes
     @Public()
+    @UseGuards(OptionalJwtAuthGuard)
     @Get('browse')
-    async browse(@Query() dto: BrowseClassFilterDto) {
-        return await this.classservice.browse(dto);
+    async browse(@Query() dto: BrowseClassFilterDto, @GetCurrentUserId() userId: string) {
+        return await this.classservice.browse(dto, userId);
     }
 
     // // 8️⃣ Get public class by id
     @Public()
+    @UseGuards(OptionalJwtAuthGuard)
     @Get(':seo_name')
-    async getPublicById(@Param('seo_name') seo_name: string) {
-        return await this.classservice.getPublicById(seo_name);
+    async getPublicById(@Param('seo_name') seo_name: string, @GetCurrentUserId() userId: string) {
+        return await this.classservice.getPublicById(seo_name, userId);
     }
 }

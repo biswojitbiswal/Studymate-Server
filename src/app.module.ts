@@ -69,8 +69,8 @@ import { ReviewModule } from 'review/review.module';
     ClassEnrollmentModule,
     AssignmentModule,
     ResourceModule,
-    WishlistModule
-    ReviewModule
+    WishlistModule,
+    ReviewModule,
   ],
   providers: [
     {

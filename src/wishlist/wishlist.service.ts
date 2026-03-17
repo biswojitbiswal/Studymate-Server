@@ -18,6 +18,7 @@ export class WishlistService {
                 throw new NotFoundException("Class not found");
             }
 
+
             const wishlist = await this.prisma.wishlist.findUnique({
                 where: {
                     userId_productId: {
@@ -27,8 +28,9 @@ export class WishlistService {
                 },
             });
 
+
             if (wishlist) {
-                await this.prisma.wishlist.delete({
+                const deleted = await this.prisma.wishlist.delete({
                     where: {
                         userId_productId: {
                             userId,
@@ -92,7 +94,66 @@ export class WishlistService {
                         createdAt: "desc",
                     },
                     select: {
-                        product: true,
+                        product: {
+                            select: {
+                                id: true,
+                                title: true,
+                                seo_name: true,
+                                description: true,
+                                previewImg: true,
+                                previewVdo: true,
+                                price: true,
+                                capacity: true,
+                                type: true,
+                                joiningStartDate: true,
+                                joiningEndDate: true,
+                                startDate: true,
+                                endDate: true,
+                                startTime: true,
+                                durationMin: true,
+                                isPaid: true,
+                                syllabus: true,
+                                tutor: {
+                                    select: {
+                                        id: true,
+                                        rating: true,
+                                        totalStudents: true,
+                                        yearsOfExp: true,
+                                        user: {
+                                            select: {
+                                                id: true,
+                                                name: true,
+                                                avatar: true
+                                            }
+                                        }
+                                    }
+                                },
+                                subject: {
+                                    select: {
+                                        id: true,
+                                        name: true
+                                    }
+                                },
+                                board: {
+                                    select: {
+                                        id: true,
+                                        name: true
+                                    }
+                                },
+                                level: {
+                                    select: {
+                                        id: true,
+                                        name: true
+                                    }
+                                },
+                                language: {
+                                    select: {
+                                        id: true,
+                                        name: true
+                                    }
+                                }
+                            }
+                        },
                     },
                 }),
                 this.prisma.wishlist.count({
@@ -107,7 +168,7 @@ export class WishlistService {
                 page,
                 limit,
                 totalPages: Math.ceil(total / limit),
-                data
+                data 
             };
         } catch (error) {
             throw error;

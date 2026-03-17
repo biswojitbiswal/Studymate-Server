@@ -16,7 +16,7 @@ export class TuitionClassService {
     async create(dto: CreateTuitionClassDto, userId: string, files: {
         previewImg?: Express.Multer.File[];
         previewVdo?: Express.Multer.File[];
-    }) {        
+    }) {
         try {
             let previewImg: string | null = null;
             let previewVdo: string | null = null;
@@ -514,7 +514,7 @@ export class TuitionClassService {
             //     _count: {classId: true}
             // })
             // console.log(enrollmentCounts);
-            
+
             // const enrollmentMap = new Map(
             //     enrollmentCounts.map(e => [e.classId, e._count.classId])
             // )
@@ -524,7 +524,7 @@ export class TuitionClassService {
             //     totalEnrollment: enrollmentMap.get(k.id) ?? 0
             // }))
             // console.log(data);
-            
+
             return {
                 page,
                 limit,
@@ -593,9 +593,9 @@ export class TuitionClassService {
                 }
             })
 
-            
 
-            return {...klass, totalEnrollment};
+
+            return { ...klass, totalEnrollment };
         } catch (error) {
             throw error
         }
@@ -715,7 +715,7 @@ export class TuitionClassService {
     }
 
 
-    async browse(dto: BrowseClassFilterDto) {
+    async browse(dto: BrowseClassFilterDto, userId: string) {
         try {
             const page = dto.page ? dto.page : 1;
             const limit = dto.limit ? dto.limit : 10;
@@ -828,16 +828,26 @@ export class TuitionClassService {
 
             const enrollmentCounts = await this.prisma.classEnrollment.groupBy({
                 by: ['classId'],
-                where: {id: {in: classIds}},
-                _count: {classId: true}
+                where: { id: { in: classIds } },
+                _count: { classId: true }
             })
 
             const enrollmentMap = new Map(
                 enrollmentCounts.map(e => [e.classId, e._count.classId])
             )
 
+            const wishlists = await this.prisma.wishlist.findMany({
+                where: { userId },
+                select: {
+                    productId: true
+                }
+            })
+
+            const wishlistSet = new Set(wishlists.map(w => w.productId));
+
             const items = data.map(cls => ({
                 ...cls,
+                isWishlisted: wishlistSet.has(cls.id),
                 totalEnrollment: enrollmentMap.get(cls.id)
             }))
 
@@ -856,7 +866,7 @@ export class TuitionClassService {
     }
 
 
-    async getPublicById(seo_name: string) {
+    async getPublicById(seo_name: string, userId: string) {
         try {
             const klass = await this.prisma.tuitionClass.findUnique({
                 where: { seo_name },
@@ -919,9 +929,27 @@ export class TuitionClassService {
                 }
             })
 
-            if(!klass) throw new NotFoundException("Class not found")
+            if (!klass) throw new NotFoundException("Class not found")
 
-            return klass;
+            let isWishlisted = false;
+
+            if (userId) {
+                const wishlist = await this.prisma.wishlist.findUnique({
+                    where: {
+                        userId_productId: {
+                            userId,
+                            productId: klass.id
+                        }
+                    }
+                });
+
+                isWishlisted = !!wishlist;
+            }
+
+            return {
+                ...klass,
+                isWishlisted
+            };
         } catch (error) {
             throw error;
         }

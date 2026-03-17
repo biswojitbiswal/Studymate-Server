@@ -3,6 +3,8 @@ import { WishlistService } from "./wishlist.service";
 import { AuthGuard } from "common/guards/auth.guard";
 import { GetCurrentUserId } from "common/decorator/get-current-user-id.decorator";
 import { PaginationDto } from "common/dtos/pagination.dto";
+import { Public } from "common/decorator/public.decorator";
+import { OptionalJwtAuthGuard } from "common/guards/optionaljwt.guard";
 
 
 @Controller({
@@ -22,7 +24,7 @@ export class WishlistController{
     }
 
 
-
+    // @Public()
     @UseGuards(AuthGuard)
     @Post(':id/toggle')
     async toggle(@Param('id') id: string, @GetCurrentUserId() userId: string){
