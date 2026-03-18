@@ -33,6 +33,7 @@ import { PaymentModule } from './payment/payment.module';
 import { ClassEnrollmentModule } from './class-enrollment/class-enrollment.module';
 import { ResourceModule } from 'resources/resources.module';
 import { AssignmentModule } from 'assignments/assignment.module';
+import { WishlistModule } from 'wishlist/wishlist.module';
 
 
 @Module({
@@ -67,6 +68,7 @@ import { AssignmentModule } from 'assignments/assignment.module';
     ClassEnrollmentModule,
     AssignmentModule,
     ResourceModule,
+    WishlistModule
   ],
   providers: [
     {
