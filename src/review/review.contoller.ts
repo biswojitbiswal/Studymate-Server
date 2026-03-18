@@ -16,7 +16,7 @@ export class ReviewController{
 
 
     @UseGuards(AuthGuard, RolesGuard)
-    @Roles('STUENT')
+    @Roles('STUDENT')
     @Post()
     async create(@Body() dto: ReviewDto, @GetCurrentUserId() userId: string){
         return await this.reviewService.create(dto, userId)
@@ -25,7 +25,7 @@ export class ReviewController{
 
     @UseGuards(AuthGuard, RolesGuard)
     @Roles('ADMIN')
-    @Get()
+    @Get('admin')
     async getAll(@Query() dto: ReviewFilterDto){
         return await this.reviewService.getAll(dto)
     }
@@ -35,6 +35,13 @@ export class ReviewController{
     @Get()
     async getBrowse(@Query() dto: ReviewFilterDto){
         return await this.reviewService.getBrowse(dto)
+    }
+
+
+    @UseGuards(AuthGuard)
+    @Get(':classId')
+    async getByStudent(@Param('classId') classId: string, @GetCurrentUserId() userId: string){
+        return await this.reviewService.getByStudent(classId, userId)
     }
 
 

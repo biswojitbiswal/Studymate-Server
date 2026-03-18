@@ -243,4 +243,38 @@ export class ReviewService {
             throw error
         }
     }
+
+
+    async getByStudent(classId: string, userId: string){
+        try {
+            const student = await this.prisma.student.findUnique({
+                where: {userId},
+                select: {
+                    id: true
+                }
+            })
+            if(!student) throw new NotFoundException("Student account not found");
+
+            const klass = await this.prisma.tuitionClass.findUnique({
+                where: {id: classId},
+                select: {
+                    id: true
+                }
+            })
+            if(!klass) throw new NotFoundException("Class not found");
+
+            const review = await this.prisma.review.findFirst({
+                where: {
+                    klassId: klass.id,
+                    studentId: student.id
+                }
+            })
+
+            if(!review) throw new NotFoundException("Review not found");
+
+            return review;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
