@@ -20,6 +20,8 @@ export class EmailService {
   private readonly fromEmail: string;
 
   async sendEmail(to: string, subject: string, html: string) {
+    console.log("API KEY:", process.env.SENDGRID_API_KEY);
+    console.log("FROM EMAIL:", process.env.SENDGRID_FROM_EMAIL);
     await sgMail.send({
       to,
       from: this.fromEmail,

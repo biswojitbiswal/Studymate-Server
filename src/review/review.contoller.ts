@@ -47,7 +47,7 @@ export class ReviewController{
 
     @UseGuards(AuthGuard, RolesGuard)
     @Roles('ADMIN')
-    @Patch(':id')
+    @Patch(':id/status')
     async statusUpdate(@Param('id') id: string, @Body() dto: ReviewStatusDto){
         return await this.reviewService.statusUpdate(id, dto)
     }

@@ -115,6 +115,16 @@ export class ReviewService {
                             select: {
                                 id: true,
                                 title: true,
+                                tutor: {
+                                    select: {
+                                        user: {
+                                            select: {
+                                                id: true,
+                                                name: true
+                                            }
+                                        }
+                                    }
+                                }
                             },
                         },
                     },

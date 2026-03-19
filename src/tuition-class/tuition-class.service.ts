@@ -587,15 +587,15 @@ export class TuitionClassService {
                 if (klass.tutorId !== tutor.id) throw new ForbiddenException("You do not own this class.")
             }
 
-            const totalEnrollment = await this.prisma.classEnrollment.count({
-                where: {
-                    classId: klass.id
-                }
-            })
+            // const totalEnrollment = await this.prisma.classEnrollment.count({
+            //     where: {
+            //         classId: klass.id
+            //     }
+            // })
 
 
 
-            return { ...klass, totalEnrollment };
+            return { ...klass };
         } catch (error) {
             throw error
         }
@@ -791,6 +791,8 @@ export class TuitionClassService {
                         type: true,
                         subjectId: true,
                         levelId: true,
+                        capacity: true,
+                        totalEnrolment: true,
                         tutor: {
                             select: {
                                 id: true,
@@ -824,17 +826,6 @@ export class TuitionClassService {
                 this.prisma.tuitionClass.count({ where }),
             ]);
 
-            const classIds = data?.map(cls => cls.id);
-
-            const enrollmentCounts = await this.prisma.classEnrollment.groupBy({
-                by: ['classId'],
-                where: { id: { in: classIds } },
-                _count: { classId: true }
-            })
-
-            const enrollmentMap = new Map(
-                enrollmentCounts.map(e => [e.classId, e._count.classId])
-            )
 
             let wishlistSet = new Set();
 
@@ -850,7 +841,6 @@ export class TuitionClassService {
             const items = data.map(cls => ({
                 ...cls,
                 isWishlisted: wishlistSet.has(cls.id),
-                totalEnrollment: enrollmentMap.get(cls.id)
             }))
 
             return {
@@ -889,6 +879,7 @@ export class TuitionClassService {
                     durationMin: true,
                     isPaid: true,
                     syllabus: true,
+                    totalEnrolment: true,
                     tutor: {
                         select: {
                             id: true,

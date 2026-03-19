@@ -154,7 +154,7 @@ export class PaymentService {
                 console.log('⚠️ Duplicate webhook ignored:', paymentId);
                 return { received: true };
             }
-            console.log(existingTransaction);
+            // console.log(existingTransaction);
 
             // 4️⃣ Process event
             switch (event.event) {
@@ -215,10 +215,21 @@ export class PaymentService {
                 }
             });
 
-            await tx.order.update({
+            const order = await tx.order.update({
                 where: { id: transaction.orderId },
                 data: { status: OrderStatus.PAID }
             });
+
+            await this.prisma.tuitionClass.update({
+                where: {
+                    id: order.productId
+                },
+                data: {
+                    totalEnrolment: {
+                        increment: 1
+                    }
+                }
+            })
 
             await this.couponService.redeemCouponAfterPayment(tx, transaction.orderId);
 

@@ -447,6 +447,8 @@ model TuitionClass{
   price                   Float?
   currency                String?
 
+  totalEnrolment          Int?                        @default(0)
+
 
   createdAt               DateTime                    @default(now())
   updatedAt               DateTime                    @updatedAt
