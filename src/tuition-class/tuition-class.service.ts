@@ -836,14 +836,16 @@ export class TuitionClassService {
                 enrollmentCounts.map(e => [e.classId, e._count.classId])
             )
 
-            const wishlists = await this.prisma.wishlist.findMany({
-                where: { userId },
-                select: {
-                    productId: true
-                }
-            })
+            let wishlistSet = new Set();
 
-            const wishlistSet = new Set(wishlists.map(w => w.productId));
+            if (userId) {
+                const wishlists = await this.prisma.wishlist.findMany({
+                    where: { userId },
+                    select: { productId: true },
+                });
+
+                wishlistSet = new Set(wishlists.map(w => w.productId));
+            }
 
             const items = data.map(cls => ({
                 ...cls,
