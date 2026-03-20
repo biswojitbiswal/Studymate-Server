@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { OrderStatus, ProductType } from "src/common/enums/order.enum";
+import { OrderStatus, ProductType, SeatReservation } from "src/common/enums/order.enum";
 import { PriceOn, PriceType } from "src/common/enums/price.enum";
 import { PrismaService } from "src/prisma/prisma.service";
 import { AdminOrderFilterDto, CreateOrderDto, OrderFilterDto } from "./dtos/order.dto";
@@ -162,6 +162,7 @@ export class OrderService {
 
                 if (!student) throw new NotFoundException("Student account not found");
 
+                // ✅ prevent already enrolled
                 const alreadyEnrolled = await tx.classEnrollment.findFirst({
                     where: {
                         classId: klass.id,
@@ -169,16 +170,9 @@ export class OrderService {
                     }
                 });
 
-                if (alreadyEnrolled)
+                if (alreadyEnrolled) {
                     throw new BadRequestException("You already purchased this class");
-
-                const enrolledCount = await tx.classEnrollment.count({
-                    where: { classId: klass.id }
-                });
-
-                if (enrolledCount >= klass.capacity)
-                    throw new BadRequestException("Class is full");
-
+                }
 
                 /* -------- PRICE CALCULATION -------- */
 
@@ -196,8 +190,7 @@ export class OrderService {
                 for (const c of commissions) {
                     if (c.type === PriceType.FIXED) {
                         totalCommission += Math.round((c.value ?? 0) * 100);
-                    }
-                    else if (c.type === PriceType.PERCENTAGE) {
+                    } else if (c.type === PriceType.PERCENTAGE) {
                         totalCommission += Math.round((c.value / 100) * subtotal);
                     }
                 }
@@ -218,15 +211,57 @@ export class OrderService {
                 const totalAmount = subtotal + totalTaxAmount;
 
 
-                /* -------- ORDER NUMBER GENERATION -------- */
+                // ✅ prevent duplicate reservation
+                let existingReservation = await tx.seatReservation.findFirst({
+                    where: {
+                        classId: klass.id,
+                        userId,
+                        status: SeatReservation.ACTIVE,
+                        expiredAt: { gt: new Date() }
+                    }
+                });
+
+                if (!existingReservation) {
+                    // only create if not exists
+                    const activeReservationCount = await tx.seatReservation.count({
+                        where: {
+                            classId: klass.id,
+                            status: SeatReservation.ACTIVE,
+                            expiredAt: { gt: new Date() }
+                        }
+                    });
+
+                    const totalTaken = klass.totalEnrolment + activeReservationCount;
+
+                    if (totalTaken >= klass.capacity) {
+                        throw new BadRequestException("No seats available");
+                    }
+
+                    existingReservation = await tx.seatReservation.create({
+                        data: {
+                            classId: klass.id,
+                            userId,
+                            status: SeatReservation.ACTIVE,
+                            expiredAt: new Date(Date.now() + 10 * 60 * 1000),
+                        }
+                    });
+
+                } else {
+                    // 🔥 OPTIONAL: extend reservation time (VERY IMPORTANT UX)
+                    await tx.seatReservation.update({
+                        where: { id: existingReservation.id },
+                        data: {
+                            expiredAt: new Date(Date.now() + 10 * 60 * 1000)
+                        }
+                    });
+                }
+
+                /* -------- ORDER NUMBER -------- */
 
                 const year = new Date().getFullYear();
-
                 const seq = await this.getNextOrderSequence(tx, year);
-
                 const padded = String(seq).padStart(4, '0');
                 const orderCode = `SN-C-${year}-${padded}`;
-
 
                 /* -------- CREATE ORDER -------- */
 
@@ -245,21 +280,22 @@ export class OrderService {
                     }
                 });
 
-
                 return createdOrder;
             });
 
+            // outside transaction (correct)
             if (dto.couponCode) {
                 await this.coupon.createCouponRemption(
                     userId,
                     dto.couponCode,
                     order.id
-                )
+                );
             }
 
             const payment = await this.paymentService.createRazorpayOrder(order.id, userId);
 
             return payment;
+
         } catch (error) {
             throw error;
         }
@@ -565,9 +601,9 @@ export class OrderService {
 
         let coupon = {} as any;
 
-        if(order.couponId){
+        if (order.couponId) {
             coupon = await this.prisma.coupon.findUnique({
-                where: {id: order.couponId}
+                where: { id: order.couponId }
             })
         }
 

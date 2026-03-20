@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import Razorpay from "razorpay";
-import { OrderStatus } from "src/common/enums/order.enum";
+import { OrderStatus, SeatReservation } from "src/common/enums/order.enum";
 import { PaymentProvider, PaymentStatus, PaymentType } from "src/common/enums/payment.enum";
 import { PrismaService } from "src/prisma/prisma.service";
 import { PaymentVerifyDto } from "./dtos/payment.dto";
@@ -183,7 +183,7 @@ export class PaymentService {
 
 
     async handlePaymentSuccess(payment: any) {
-        console.log("payment success webhook reached");
+        // console.log("payment success webhook reached");
 
         const razorpayOrderId = payment.order_id;
         const razorpayPaymentId = payment.id;
@@ -194,18 +194,17 @@ export class PaymentService {
         });
 
         if (!transaction) {
-            console.log("No transaction found for order:", razorpayOrderId);
+            // console.log("No transaction found for order:", razorpayOrderId);
             return;
         }
 
         // already processed safety
         if (transaction.status === PaymentStatus.SUCCESS) {
-            console.log("Transaction already processed");
+            // console.log("Transaction already processed");
             return;
         }
 
         await this.prisma.$transaction(async (tx) => {
-
             // store payment id (VERY IMPORTANT)
             await tx.transaction.update({
                 where: { id: transaction.id },
@@ -219,6 +218,21 @@ export class PaymentService {
                 where: { id: transaction.orderId },
                 data: { status: OrderStatus.PAID }
             });
+
+            const reservation = await this.prisma.seatReservation.update({
+                where: {
+                    classId: order.productId,
+                    userId: order.userId,
+                    status: SeatReservation.ACTIVE,
+                },
+            })
+
+            await this.prisma.seatReservation.update({
+                where: { id: reservation.id },
+                data: {
+                    status: SeatReservation.CONFIRMED
+                }
+            })
 
             await this.prisma.tuitionClass.update({
                 where: {
@@ -261,9 +275,24 @@ export class PaymentService {
                     data: { status: PaymentStatus.FAILED }
                 })
 
-                await tx.order.update({
+                const order = await tx.order.update({
                     where: { id: transaction.orderId },
                     data: { status: OrderStatus.FAILED }
+                })
+
+                const reservation = await this.prisma.seatReservation.update({
+                    where: {
+                        classId: order.productId,
+                        userId: order.userId,
+                        status: SeatReservation.ACTIVE,
+                    },
+                })
+
+                await this.prisma.seatReservation.update({
+                    where: { id: reservation.id },
+                    data: {
+                        status: SeatReservation.EXPIRED
+                    }
                 })
 
                 await this.couponService.releaseCouponAfterFailure(tx, transaction.orderId);

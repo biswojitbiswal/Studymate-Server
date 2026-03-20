@@ -10,3 +10,10 @@ export enum OrderStatus {
     FAILED = 'FAILED',
     CANCELLED = 'CANCELLED'
 }
+
+
+export enum SeatReservation {
+    ACTIVE = 'ACTIVE',
+    CONFIRMED = 'CONFIRMED',
+    EXPIRED = 'EXPIRED',
+}

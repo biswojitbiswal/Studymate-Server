@@ -740,6 +740,25 @@ model CouponRedemption {
 }
 
 
+enum SeatStatus{
+  ACTIVE
+  CONFIRMED
+  EXPIRED
+}
+
+model SeatReservation{
+  id              String              @id @default(auto()) @map("_id") @db.ObjectId
+
+  classId         String              @db.ObjectId
+  userId          String              @db.ObjectId
+
+  expiredAt       DateTime
+  status          SeatStatus
+
+  createdAt DateTime @default(now())
+}
+
+
 enum ProductType{
   CLASS
   RESOURCE
