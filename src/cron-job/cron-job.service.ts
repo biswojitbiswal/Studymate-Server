@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { SeatReservation } from 'common/enums/order.enum';
 import { ClassStatus, ClassType } from 'src/common/enums/tuition-class.enum';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SessionJob } from 'src/session/session.jobs';
@@ -15,10 +16,7 @@ export class CronService {
         private readonly sessionJob: SessionJob
     ) { }
 
-    /**
-     * MASTER DAILY CRON
-     * Runs every day at midnight
-     */
+
     @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, {
         timeZone: 'Asia/Kolkata',
     })
@@ -33,7 +31,7 @@ export class CronService {
 
     @Cron('0 */6 * * *', {
         timeZone: 'Asia/Kolkata',
-    }) // every 6 hours
+    })
     async sessionSafetyCron() {
         await this.handleSessionGenerateLifecycle();
 
@@ -72,5 +70,30 @@ export class CronService {
         }
 
 
+    }
+
+
+    @Cron(CronExpression.EVERY_MINUTE)
+    async expireReservations() {
+        try {
+            const now = new Date();
+
+            const result = await this.prisma.seatReservation.updateMany({
+                where: {
+                    status: SeatReservation.ACTIVE,
+                    expiredAt: { lt: now }
+                },
+                data: {
+                    status: SeatReservation.EXPIRED
+                }
+            });
+
+            if (result.count > 0) {
+                this.logger.log(`⏰ Expired ${result.count} reservations`);
+            }
+
+        } catch (error) {
+            this.logger.log("Cron error (expireReservations):", error);
+        }
     }
 }

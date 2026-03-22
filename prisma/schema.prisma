@@ -475,7 +475,7 @@ model ClassEnrollment {
   classId           String              @db.ObjectId
   studentId         String              @db.ObjectId
 
-  orderId           String              @db.ObjectId
+  orderId           String?              @db.ObjectId
 
   enrolledAt        DateTime            @default(now())
 
@@ -752,10 +752,12 @@ model SeatReservation{
   classId         String              @db.ObjectId
   userId          String              @db.ObjectId
 
-  expiredAt       DateTime
+  expiredAt       DateTime?
   status          SeatStatus
 
-  createdAt DateTime @default(now())
+  createdAt       DateTime            @default(now())
+
+  @@unique([classId, userId, status])
 }
 
 

@@ -267,7 +267,7 @@ export class AuthService {
         });
 
         // new access token
-        const payload = { sub: user.id, email: user.email, role: user.role };
+        const payload = { id: user.id, email: user.email, role: user.role };
         const newAccessToken = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
 
         return {

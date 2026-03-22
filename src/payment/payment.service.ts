@@ -219,22 +219,25 @@ export class PaymentService {
                 data: { status: OrderStatus.PAID }
             });
 
-            const reservation = await this.prisma.seatReservation.update({
+            const reservation = await tx.seatReservation.findFirst({
                 where: {
                     classId: order.productId,
                     userId: order.userId,
                     status: SeatReservation.ACTIVE,
-                },
-            })
-
-            await this.prisma.seatReservation.update({
-                where: { id: reservation.id },
-                data: {
-                    status: SeatReservation.CONFIRMED
+                    expiredAt: { gt: new Date() }
                 }
-            })
+            });
 
-            await this.prisma.tuitionClass.update({
+            if (reservation) {
+                await tx.seatReservation.update({
+                    where: { id: reservation.id },
+                    data: {
+                        status: SeatReservation.CONFIRMED
+                    }
+                })
+            }
+
+            await tx.tuitionClass.update({
                 where: {
                     id: order.productId
                 },
@@ -280,20 +283,23 @@ export class PaymentService {
                     data: { status: OrderStatus.FAILED }
                 })
 
-                const reservation = await this.prisma.seatReservation.update({
+                const reservation = await tx.seatReservation.findFirst({
                     where: {
                         classId: order.productId,
                         userId: order.userId,
                         status: SeatReservation.ACTIVE,
-                    },
-                })
-
-                await this.prisma.seatReservation.update({
-                    where: { id: reservation.id },
-                    data: {
-                        status: SeatReservation.EXPIRED
+                        expiredAt: { gt: new Date() }
                     }
-                })
+                });
+
+                if (reservation) {
+                    await tx.seatReservation.update({
+                        where: { id: reservation.id },
+                        data: {
+                            status: SeatReservation.EXPIRED
+                        }
+                    })
+                }
 
                 await this.couponService.releaseCouponAfterFailure(tx, transaction.orderId);
 

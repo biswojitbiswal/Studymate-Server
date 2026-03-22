@@ -13,7 +13,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   // payload is what you signed in signin(): { id, email, role }
-  async validate(payload: any) {
+  async validate(payload: any) {;
+    
     // whatever you return here will be set to req.user
     return {
       id: payload.id,

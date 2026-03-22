@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Param, Query, Req, UseGuards } from "@nestjs/common";
 import { TuitionClassService } from "./tuition-class.service";
 import { BrowseClassFilterDto } from "./dtos/tuition-class.dto";
 import { Public } from "src/common/decorator/public.decorator";
@@ -16,7 +16,10 @@ export class PublicClassController {
     @Public()
     @UseGuards(OptionalJwtAuthGuard)
     @Get('browse')
-    async browse(@Query() dto: BrowseClassFilterDto, @GetCurrentUserId() userId: string) {
+    async browse(@Query() dto: BrowseClassFilterDto, @GetCurrentUserId() userId: string, @Req() req) {
+        console.log("HEADERS:", req.headers.authorization);
+        console.log("USER:", req.user);
+        console.log("USER ID:", userId);
         return await this.classservice.browse(dto, userId);
     }
 

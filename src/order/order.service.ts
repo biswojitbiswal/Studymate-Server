@@ -143,17 +143,13 @@ export class OrderService {
 
     async create(dto: CreateOrderDto, userId: string) {
         try {
-            const order = await this.prisma.$transaction(async (tx) => {
+            const result = await this.prisma.$transaction(async (tx) => {
 
-                let klass: any;
+                let klass = await tx.tuitionClass.findUnique({
+                    where: { id: dto.productId }
+                });
 
-                if (dto.itemType === PriceOn.CLASS) {
-                    klass = await tx.tuitionClass.findUnique({
-                        where: { id: dto.productId }
-                    });
-
-                    if (!klass) throw new NotFoundException("Class not found");
-                }
+                if (!klass) throw new NotFoundException("Class not found");
 
                 const student = await tx.student.findUnique({
                     where: { userId },
@@ -162,7 +158,7 @@ export class OrderService {
 
                 if (!student) throw new NotFoundException("Student account not found");
 
-                // ✅ prevent already enrolled
+                // ✅ already enrolled check
                 const alreadyEnrolled = await tx.classEnrollment.findFirst({
                     where: {
                         classId: klass.id,
@@ -172,6 +168,92 @@ export class OrderService {
 
                 if (alreadyEnrolled) {
                     throw new BadRequestException("You already purchased this class");
+                }
+
+                /* =========================================================
+                   🆓 FREE CLASS FLOW
+                ========================================================= */
+                if (klass.isPaid === false) {
+
+                    if ((klass.totalEnrolment ?? 0) >= klass.capacity) {
+                        throw new BadRequestException("Class is full");
+                    }
+
+                    await tx.classEnrollment.create({
+                        data: {
+                            classId: klass.id,
+                            studentId: student.id,
+                            enrolledAt: new Date()
+                        }
+                    });
+
+                    await tx.tuitionClass.update({
+                        where: { id: klass.id },
+                        data: {
+                            totalEnrolment: {
+                                increment: 1
+                            }
+                        }
+                    });
+
+                    return {
+                        type: "FREE",
+                        klass,
+                        message: "Enrolled successfully"
+                    };
+                }
+
+                /* =========================================================
+                   💰 PAID CLASS FLOW
+                ========================================================= */
+
+                // 🔒 Reservation (reuse or create)
+                let reservation = await tx.seatReservation.findFirst({
+                    where: {
+                        classId: klass.id,
+                        userId,
+                        status: SeatReservation.ACTIVE,
+                        expiredAt: { gt: new Date() },
+                    }
+                });
+
+                if (!reservation) {
+
+                    const activeReservationCount = await tx.seatReservation.count({
+                        where: {
+                            classId: klass.id,
+                            status: SeatReservation.ACTIVE,
+                            expiredAt: { gt: new Date() }
+                        }
+                    });
+
+                    const totalTaken = (klass.totalEnrolment ?? 0) + activeReservationCount;
+
+                    if (totalTaken >= klass.capacity) {
+                        throw new BadRequestException("No seats available");
+                    }
+
+                    reservation = await tx.seatReservation.create({
+                        data: {
+                            classId: klass.id,
+                            userId,
+                            status: SeatReservation.ACTIVE,
+                            expiredAt: new Date(Date.now() + 10 * 60 * 1000),
+                        }
+                    });
+
+                } else {
+                    // optional: extend only if near expiry
+                    // const remainingTime = reservation.expiredAt.getTime() - Date.now();
+
+                    // if (remainingTime < 3 * 60 * 1000) {
+                        await tx.seatReservation.update({
+                            where: { id: reservation.id },
+                            data: {
+                                expiredAt: new Date(Date.now() + 10 * 60 * 1000)
+                            }
+                        });
+                    // }
                 }
 
                 /* -------- PRICE CALCULATION -------- */
@@ -210,52 +292,6 @@ export class OrderService {
 
                 const totalAmount = subtotal + totalTaxAmount;
 
-
-                // ✅ prevent duplicate reservation
-                let existingReservation = await tx.seatReservation.findFirst({
-                    where: {
-                        classId: klass.id,
-                        userId,
-                        status: SeatReservation.ACTIVE,
-                        expiredAt: { gt: new Date() }
-                    }
-                });
-
-                if (!existingReservation) {
-                    // only create if not exists
-                    const activeReservationCount = await tx.seatReservation.count({
-                        where: {
-                            classId: klass.id,
-                            status: SeatReservation.ACTIVE,
-                            expiredAt: { gt: new Date() }
-                        }
-                    });
-
-                    const totalTaken = klass.totalEnrolment + activeReservationCount;
-
-                    if (totalTaken >= klass.capacity) {
-                        throw new BadRequestException("No seats available");
-                    }
-
-                    existingReservation = await tx.seatReservation.create({
-                        data: {
-                            classId: klass.id,
-                            userId,
-                            status: SeatReservation.ACTIVE,
-                            expiredAt: new Date(Date.now() + 10 * 60 * 1000),
-                        }
-                    });
-
-                } else {
-                    // 🔥 OPTIONAL: extend reservation time (VERY IMPORTANT UX)
-                    await tx.seatReservation.update({
-                        where: { id: existingReservation.id },
-                        data: {
-                            expiredAt: new Date(Date.now() + 10 * 60 * 1000)
-                        }
-                    });
-                }
-
                 /* -------- ORDER NUMBER -------- */
 
                 const year = new Date().getFullYear();
@@ -280,10 +316,23 @@ export class OrderService {
                     }
                 });
 
-                return createdOrder;
+                return {
+                    type: "PAID",
+                    order: createdOrder
+                };
             });
 
-            // outside transaction (correct)
+            /* =========================================================
+               OUTSIDE TRANSACTION
+            ========================================================= */
+
+            // 🆓 FREE RESPONSE
+            if (result.type === "FREE") {
+                return result;
+            }
+
+            const order = result.order!;
+
             if (dto.couponCode) {
                 await this.coupon.createCouponRemption(
                     userId,
@@ -300,6 +349,7 @@ export class OrderService {
             throw error;
         }
     }
+
 
 
     async getStatus(orderId: string) {
