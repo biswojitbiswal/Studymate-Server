@@ -53,9 +53,12 @@ model User {
   student                 Student?
   tutor                   Tutor?
 
+  NotificationPreference  NotificationPreference?
+
   orders                  Order[]
   transactions            Transaction[]
   wishlists               Wishlist[]
+  notifications           Notification[]
 
 
   createdAt               DateTime                  @default(now())
@@ -901,4 +904,39 @@ model Wishlist {
   createdAt             DateTime        @default(now())
 
   @@unique([userId, productId])
+}
+
+
+
+model NotificationPreference{
+  id                    String          @id @default(auto()) @map("_id") @db.ObjectId
+
+  userId                String          @unique@db.ObjectId
+  user                  User            @relation(fields: [userId], references: [id])
+
+  emailEnabled          Boolean         @default(true)
+  inAppEnabled          Boolean         @default(true)
+  smsEnabled            Boolean         @default(true)
+  pushEnabled           Boolean         @default(true)
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+}
+
+
+model Notification{
+  id                    String          @id @default(auto()) @map("_id") @db.ObjectId
+
+  userId                String          @db.ObjectId
+  user                  User            @relation(fields: [userId], references: [id])
+
+  title                 String
+  message               String
+
+  type                  String
+  isRead                Boolean         @default(false)
+  metadata              Json?
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 }
