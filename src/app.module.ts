@@ -35,6 +35,7 @@ import { ResourceModule } from 'resources/resources.module';
 import { AssignmentModule } from 'assignments/assignment.module';
 import { WishlistModule } from 'wishlist/wishlist.module';
 import { ReviewModule } from 'review/review.module';
+import { NotificationModule } from 'notification/notification.module';
 
 
 @Module({
@@ -71,6 +72,7 @@ import { ReviewModule } from 'review/review.module';
     ResourceModule,
     WishlistModule,
     ReviewModule,
+    NotificationModule
   ],
   providers: [
     {
