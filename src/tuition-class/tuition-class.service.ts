@@ -168,7 +168,7 @@ export class TuitionClassService {
             }
         } catch (err) {
             // log only — NEVER break update flow
-            console.error('Media cleanup failed', err);
+            throw err;
         }
     }
 
@@ -508,23 +508,6 @@ export class TuitionClassService {
                 this.prisma.tuitionClass.count({ where })
             ]);
 
-            // const classIds = classes.map(cls => cls.id);
-            // const enrollmentCounts = await this.prisma.classEnrollment.groupBy({
-            //     by: ['classId'],
-            //     where: {id: {in: classIds}},
-            //     _count: {classId: true}
-            // })
-            // console.log(enrollmentCounts);
-
-            // const enrollmentMap = new Map(
-            //     enrollmentCounts.map(e => [e.classId, e._count.classId])
-            // )
-
-            // const data = classes.map(k => ({
-            //     ...k,
-            //     totalEnrollment: enrollmentMap.get(k.id) ?? 0
-            // }))
-            // console.log(data);
 
             return {
                 page,
@@ -827,12 +810,10 @@ export class TuitionClassService {
                 this.prisma.tuitionClass.count({ where }),
             ]);
 
-            console.log("Browse classes", userId);
             
             let wishlistSet = new Set();
 
             if (userId) {
-                console.log("Checking Wishlist");
                 const wishlists = await this.prisma.wishlist.findMany({
                     where: { userId },
                     select: { productId: true },
@@ -843,7 +824,6 @@ export class TuitionClassService {
 
             let purchaseSet = new Set();
             if (userId) {
-                console.log("Checking Purchased");
                 const purchases = await this.prisma.classEnrollment.findMany({
                     where: {
                         student: {
@@ -947,7 +927,6 @@ export class TuitionClassService {
             let isWishlisted = false;
 
             if (userId) {
-                console.log("Checking Wishlist");
                 const wishlist = await this.prisma.wishlist.findUnique({
                     where: {
                         userId_productId: {
@@ -962,8 +941,6 @@ export class TuitionClassService {
 
             let isPurchased = false;
             if (userId) {
-                console.log("Checking Purchased");
-                
                 const enrollment = await this.prisma.classEnrollment.findFirst({
                     where: {
                         classId: klass.id,

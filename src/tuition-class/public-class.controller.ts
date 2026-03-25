@@ -17,9 +17,6 @@ export class PublicClassController {
     @UseGuards(OptionalJwtAuthGuard)
     @Get('browse')
     async browse(@Query() dto: BrowseClassFilterDto, @GetCurrentUserId() userId: string, @Req() req) {
-        console.log("HEADERS:", req.headers.authorization);
-        console.log("USER:", req.user);
-        console.log("USER ID:", userId);
         return await this.classservice.browse(dto, userId);
     }
 
