@@ -1,9 +1,15 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "prisma/prisma.service";
+import { NotificationPreferenceService } from "./notification-preference.service";
+import { NotificationGateway } from "./notification.gateway";
 
 @Injectable({})
 export class NotificationService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly preferenceService: NotificationPreferenceService,
+        private readonly notificationGateway: NotificationGateway
+    ) { }
 
 
     async create(data: {
@@ -14,14 +20,21 @@ export class NotificationService {
         metadata?: any
     }) {
         try {
-            const notification = await this.prisma.notification.create({
-                data: {
-                    ...data,
-                    isRead: false,
-                },
-            });
+            const pref = await this.preferenceService.getByUserId(data.userId)
 
-            return notification;
+            let notification = {} as any;
+            if (pref?.inAppEnabled) {
+                notification = await this.prisma.notification.create({
+                    data: {
+                        ...data,
+                        isRead: false,
+                    },
+                });
+
+                this.notificationGateway.sendToUser(data?.userId, notification);
+            }
+
+            return notification
         } catch (error) {
             throw error;
         }
@@ -75,16 +88,16 @@ export class NotificationService {
     }
 
 
-    async markAllAsRead(userId: string){
+    async markAllAsRead(userId: string) {
         try {
             await this.prisma.notification.updateMany({
-                where: {userId},
+                where: { userId },
                 data: {
                     isRead: true
                 }
             })
 
-            return {message: "Notifications are marked as READ"}
+            return { message: "Notifications are marked as READ" }
         } catch (error) {
             throw error;
         }
