@@ -46,6 +46,8 @@ export class WebsocketGateway
         throw new NotFoundException("User Not Found");
       }
 
+      console.log("👤 Joining room:", user.id);
+
       client.join(user.id);
 
       console.log('Client connected:', user.id);
@@ -68,5 +70,16 @@ export class WebsocketGateway
     } else {
       console.log(`Unknown client disconnected: ${client.id}`);
     }
+  }
+
+
+  // ✅ CENTRAL EMIT FUNCTION
+  sendToUser(userId: string, payload: any) {
+    console.log("📡 Emitting to:", userId);
+    this.server.to(userId).emit('notification', payload);
+  }
+
+  async sendCount(userId: string, count: number) {
+    this.server.to(userId).emit('notification_count', count);
   }
 }

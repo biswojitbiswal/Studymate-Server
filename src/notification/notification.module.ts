@@ -5,10 +5,13 @@ import { NotificationPreferenceController } from "./notification-preference.cont
 import { NotificationService } from "./notification.service";
 import { NotificationPreferenceService } from "./notification-preference.service";
 import { NotificationGateway } from "./notification.gateway";
+import { WebsocketGateway } from "websocket/websocket.gateway";
+import { WebsocketModule } from "websocket/websocket.module";
 
 @Module({
-    imports: [PrismaModule],
+    imports: [PrismaModule, WebsocketModule],
     controllers: [NotificationController, NotificationPreferenceController],
-    providers: [NotificationService, NotificationPreferenceService, NotificationGateway]
+    providers: [NotificationService, NotificationPreferenceService, NotificationGateway],
+    exports: [NotificationService, NotificationGateway]
 })
 export class NotificationModule{}

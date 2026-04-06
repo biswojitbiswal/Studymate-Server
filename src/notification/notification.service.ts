@@ -2,13 +2,15 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "prisma/prisma.service";
 import { NotificationPreferenceService } from "./notification-preference.service";
 import { NotificationGateway } from "./notification.gateway";
+import { WebsocketGateway } from "websocket/websocket.gateway";
 
 @Injectable({})
 export class NotificationService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly preferenceService: NotificationPreferenceService,
-        private readonly notificationGateway: NotificationGateway
+        private readonly notificationGateway: NotificationGateway,
+        private readonly appGateway: WebsocketGateway
     ) { }
 
 
@@ -20,6 +22,8 @@ export class NotificationService {
         metadata?: any
     }) {
         try {
+            console.log(data);
+            
             const pref = await this.preferenceService.getByUserId(data.userId)
 
             let notification = {} as any;

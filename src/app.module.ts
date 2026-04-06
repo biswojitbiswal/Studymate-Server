@@ -36,6 +36,7 @@ import { AssignmentModule } from 'assignments/assignment.module';
 import { WishlistModule } from 'wishlist/wishlist.module';
 import { ReviewModule } from 'review/review.module';
 import { NotificationModule } from 'notification/notification.module';
+import { WebsocketModule } from 'websocket/websocket.module';
 
 
 @Module({
@@ -72,7 +73,9 @@ import { NotificationModule } from 'notification/notification.module';
     ResourceModule,
     WishlistModule,
     ReviewModule,
-    NotificationModule
+    NotificationModule,
+    WebsocketModule
+    
   ],
   providers: [
     {

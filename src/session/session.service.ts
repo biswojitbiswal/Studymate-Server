@@ -8,14 +8,15 @@ import { Prisma, SessionStatus, SessionType } from "@prisma/client";
 import { SessionJob } from "./session.jobs";
 import { MeetingService } from "src/meeting/meeting.service";
 import { getSessionCalendarLabels, getSessionTimeLabel } from "common/utils/session.util";
-import { use } from "passport";
+import { NotificationService } from "notification/notification.service";
 
 @Injectable({})
 export class SessionService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly session: SessionJob,
-        private readonly meetingService: MeetingService
+        private readonly meetingService: MeetingService,
+        private readonly notification: NotificationService
     ) { }
 
     async create(dto: CreatePrivateSessionDto, userId: string) {
@@ -23,9 +24,11 @@ export class SessionService {
             const user = await this.prisma.user.findUnique({
                 where: { id: userId },
                 select: {
+                    id: true,
                     role: true,
-                    student: { select: { id: true } },
-                    tutor: { select: { id: true } },
+                    name: true,
+                    student: { select: { id: true, userId: true } },
+                    tutor: { select: { id: true, userId: true } },
                 },
             });
 
@@ -63,7 +66,7 @@ export class SessionService {
             // ─────────────────────────
             const tutor = await this.prisma.tutor.findUnique({
                 where: { id: klass.tutorId },
-                select: { id: true },
+                select: { id: true, userId: true },
             });
 
             if (!tutor) {
@@ -83,20 +86,35 @@ export class SessionService {
             // ─────────────────────────
             // Enrollment (BOTH student & tutor creation)
             // ─────────────────────────
-            if (studentId) {
-                const enrollment = await this.prisma.classEnrollment.findFirst({
-                    where: {
-                        classId: klass.id,
-                        studentId,
-                    },
-                });
-
-                if (!enrollment) {
-                    throw new ForbiddenException(
-                        'Student must be enrolled in the class.',
-                    );
+            let enrollments = [] as any;
+            // if (studentId) {
+            enrollments = await this.prisma.classEnrollment.findMany({
+                where: {
+                    classId: klass.id,
+                    // enrolledAt: { gte: new Date() },
+                },
+                include: {
+                    student: {
+                        select: {
+                            id: true,
+                            userId: true
+                        }
+                    }
                 }
+            });
+
+            if (enrollments.length === 0) {
+                throw new ForbiddenException('No student enrolled in this class');
             }
+
+            if (enrollments.length > 1) {
+                throw new InternalServerErrorException(
+                    'Private class has multiple students (invalid state)'
+                );
+            }
+
+            const student = enrollments[0].student;
+            const studentUserId = student.userId;
 
             // ─────────────────────────
             // Prevent multiple pending (student only)
@@ -286,6 +304,31 @@ export class SessionService {
                     data: { meetingLink },
                 });
             });
+
+            console.log(user, tutor.userId, studentUserId);
+
+            const sendUserId = user.role === 'STUDENT'
+                ? tutor?.userId
+                : studentUserId;
+
+            if (!sendUserId) {
+                throw new Error('UserId not found for notification');
+            }
+
+            console.log("📡 Sending to:", sendUserId);
+
+            const formattedDate = requestedDate.toDateString();
+
+            const notification = {
+                userId: sendUserId,
+                title: `${user?.name} has booked a private session.`,
+                message: `${user?.name} has booked a private session for ${klass.title} on ${formattedDate} at ${createdSession.startTime}`,
+                type: 'SESSION',
+                metadata: createdSession ?? null
+            };
+
+            await this.notification.create(notification);
+
 
             return createdSession;
         } catch (error) {

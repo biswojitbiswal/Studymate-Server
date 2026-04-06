@@ -7,18 +7,32 @@ import { Server } from 'socket.io';
     cors: { origin: '*' }
 })
 export class NotificationGateway {
-    constructor(private readonly prisma: PrismaService){}
-    
+    constructor(private readonly prisma: PrismaService) { }
+
     @WebSocketServer()
     server: Server;
 
     async sendToUser(userId: string, notification: any) {
+        
         this.server.to(userId).emit('notification', notification);
 
         const count = await this.prisma.notification.count({
             where: { userId, isRead: false },
         });
-
+        
         this.server.to(userId).emit('notification_count', count);
+    }
+
+
+    async sendToMultipleUsers(userIds: string[], notification: any) {
+        for (const userId of userIds) {
+            this.server.to(userId).emit('notification', notification);
+
+            const count = await this.prisma.notification.count({
+                where: { userId, isRead: false },
+            });
+
+            this.server.to(userId).emit('notification_count', count);
+        }
     }
 }

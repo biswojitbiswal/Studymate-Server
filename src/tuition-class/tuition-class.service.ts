@@ -8,10 +8,15 @@ import { slugify } from "src/common/utils/slugify.util";
 import { Prisma, TuitionClass } from "@prisma/client";
 import items from "razorpay/dist/types/items";
 import { ENTRY_PROVIDER_WATERMARK } from "@nestjs/common/constants";
+import { NotificationGateway } from "notification/notification.gateway";
 
 @Injectable({})
 export class TuitionClassService {
-    constructor(private readonly prisma: PrismaService, private readonly cloudinary: CloudinaryService) { }
+    constructor(
+        private readonly prisma: PrismaService, 
+        private readonly cloudinary: CloudinaryService,
+        private readonly notification: NotificationGateway,
+    ) { }
 
     // TODO: We should check the overlap existing session timing when we create any class(optional)
     async create(dto: CreateTuitionClassDto, userId: string, files: {
