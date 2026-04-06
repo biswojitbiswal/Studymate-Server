@@ -29,6 +29,8 @@ export class NotificationController{
 
     @Patch(':id/mark-read')
     async markAsRead(@Param('id') id: string){
+        console.log(id, "----------");
+        
         return await this.notificationService.markAsRead(id);
     }
 }

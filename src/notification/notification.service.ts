@@ -21,9 +21,7 @@ export class NotificationService {
         type: string
         metadata?: any
     }) {
-        try {
-            console.log(data);
-            
+        try {            
             const pref = await this.preferenceService.getByUserId(data.userId)
 
             let notification = {} as any;
@@ -66,6 +64,8 @@ export class NotificationService {
 
 
     async markAsRead(id: string) {
+        console.log(id, "============");
+        
         try {
             await this.prisma.notification.update({
                 where: { id },
@@ -84,7 +84,7 @@ export class NotificationService {
     async getUnreadCount(userId: string) {
         try {
             return await this.prisma.notification.count({
-                where: { userId }
+                where: { userId, isRead: false }
             })
         } catch (error) {
             throw error;
