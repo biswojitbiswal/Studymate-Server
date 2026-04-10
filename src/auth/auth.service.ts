@@ -278,6 +278,7 @@ export class AuthService {
             user: {
                 id: user.id,
                 email: user.email,
+                phone: user.phone,
                 role: user.role,
                 name: user.name,
                 avatar: user.avatar
@@ -496,6 +497,7 @@ export class AuthService {
                 message: 'Profile updated successfully',
             }
         } catch (error) {
+            console.log(error);
             throw error;
         }
     }
