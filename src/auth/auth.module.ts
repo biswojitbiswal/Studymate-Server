@@ -5,6 +5,7 @@ import { AuthService } from "./auth.service";
 import { JwtModule } from "@nestjs/jwt";
 import { JwtStrategy } from "./dtos/jwt.strategy";
 import { EmailModule } from "src/mail/mail.module";
+import { CloudinaryModule } from "cloudinary/cloudinary.module";
 
 @Module({
     imports: [
@@ -13,7 +14,8 @@ import { EmailModule } from "src/mail/mail.module";
             signOptions: { expiresIn: '7d' }, // token expiry 
         }),
         PrismaModule,
-        EmailModule
+        EmailModule,
+        CloudinaryModule
     ],
     controllers: [AuthController],
     providers: [AuthService, JwtStrategy]

@@ -71,3 +71,18 @@ export class ResetForgotPasswordDto {
   @IsNotEmpty()
   newPassword: string;
 }
+
+
+export class UpdateProfileDto{
+  @IsOptional()
+  @IsString()
+  name?: string
+
+  @IsOptional()
+  @IsString()
+  email?: string
+
+  @IsOptional()
+  @IsString()
+  phone?: string
+}

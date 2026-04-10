@@ -1,12 +1,13 @@
-import { Controller, Post, Body, Res, Req, Get, BadRequestException, UnauthorizedException, Param, Query, Patch, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Res, Req, Get, BadRequestException, UnauthorizedException, Param, Query, Patch, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
 import type { Response, Request } from 'express';
 import { AuthService } from "./auth.service";
 import { Public } from "src/common/decorator/public.decorator";
-import { ChangePasswordDto, ForgotDto, ResetForgotPasswordDto, SigninDto, SignupDto } from "./dtos/auth.dto";
+import { ChangePasswordDto, ForgotDto, ResetForgotPasswordDto, SigninDto, SignupDto, UpdateProfileDto } from "./dtos/auth.dto";
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { GetCurrentUserId } from 'src/common/decorator/get-current-user-id.decorator';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorator/roles.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller({
   path: 'auth',
@@ -156,5 +157,18 @@ export class AuthController {
     @Param('userId') userId: string,
   ) {
     return await this.authService.toggle(userId)
+  }
+
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @UseInterceptors(FileInterceptor('avatar'))
+  @Patch(':userId')
+  async update(
+    @Param('userId') userId: string,
+    @Body() dto: UpdateProfileDto,
+    @UploadedFile() file?: Express.Multer.File
+  ) {
+    return await this.authService.update(userId, dto, file)
   }
 }

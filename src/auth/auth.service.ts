@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, HttpException, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
-import { ChangePasswordDto, ResetForgotPasswordDto, SigninDto, SignupDto } from "./dtos/auth.dto";
+import { ChangePasswordDto, ResetForgotPasswordDto, SigninDto, SignupDto, UpdateProfileDto } from "./dtos/auth.dto";
 import { AuthProvider, Roles, SignupIntent } from '@prisma/client'
 import * as bcrypt from 'bcrypt';
 import { JwtService } from "@nestjs/jwt";
@@ -8,6 +8,7 @@ import { generateRefreshTokenPlain, hashRefreshToken, verifyRefreshToken } from 
 import { EmailService } from "src/mail/mail.service";
 import { verificationEmailHtml } from "src/common/emails/verification-email";
 import { forgotPasswordEmailHtml } from "src/common/emails/forgot-password";
+import { CloudinaryService } from "cloudinary/cloudinary.service";
 
 
 @Injectable({})
@@ -15,7 +16,8 @@ export class AuthService {
     constructor(
         private readonly prisma: PrismaService,
         private jwtService: JwtService,
-        private readonly email: EmailService
+        private readonly email: EmailService,
+        private readonly cloudinary: CloudinaryService
     ) { }
 
     private buildEmailVerificationUrl(token: string) {
@@ -125,7 +127,7 @@ export class AuthService {
 
         // 🔔 resend verification email here
         const res = await this.email.sendEmail(user.email, "Verify Your Email", html);
-        
+
         return {
             message: 'Signup successful. Please verify your email.',
             data: user
@@ -139,7 +141,7 @@ export class AuthService {
                 secret: process.env.JWT_SECRET
             })
             if (!decode || !decode.id) throw new BadRequestException("Invalid or Expired token");
-            
+
             const user = await this.prisma.user.findUnique({
                 where: { id: decode.id }
             })
@@ -171,8 +173,8 @@ export class AuthService {
 
     async signin(dto: SigninDto) {
         try {
-            const user = await this.prisma.user.findUnique({ 
-                where: { email: dto.email } 
+            const user = await this.prisma.user.findUnique({
+                where: { email: dto.email }
             });
             if (!user) throw new NotFoundException('User not found');
 
@@ -227,7 +229,7 @@ export class AuthService {
             };
         } catch (error) {
             console.log(error);
-            
+
             if (error instanceof HttpException) throw error;
             throw new InternalServerErrorException('Internal server error');
         }
@@ -362,15 +364,20 @@ export class AuthService {
             })
 
             const base = process.env.ENV === 'PROD' ? process.env.FRONT_END_URL?.replace(/\/$/, '') : 'http://localhost:5173';
-            const resetLink = `${base}/forgot-password/${token}`;
+            const resetLink = `${base}/reset-password/${token}`;
+            console.log(resetLink);
+            console.log(token);
+
             const html = forgotPasswordEmailHtml(user.name ?? 'User', resetLink)
 
-            await this.email.sendEmail(user.email, "Reset Password", html)
+            // await this.email.sendEmail(user.email, "Reset Password", html)
 
             return {
                 message: 'Resent link sent successfully',
             }
         } catch (error) {
+            console.log(error);
+
             if (error instanceof HttpException) {
                 throw error;
             }
@@ -433,6 +440,61 @@ export class AuthService {
             return {
                 message: `User ${newStatus ? 'ACTIVATED' : 'DEACTIVATED'} successfully`
             };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+
+    async update(userId: string, dto: UpdateProfileDto, file?: Express.Multer.File) {
+        try {
+            const user = await this.prisma.user.findUnique({
+                where: { id: userId }
+            })
+
+            if (!user) {
+                throw new NotFoundException("User not found");
+            }
+
+            let avatar: string | null = null;
+            if (file) {
+                if (!file.mimetype.startsWith('image/')) {
+                    throw new BadRequestException('Only image files are allowed');
+                }
+
+                const upload = await this.cloudinary.uploadFile(file.buffer, {
+                    folder: 'studymate/student',
+                });
+
+                avatar = upload.url;
+            }
+
+            const userUpdateData: any = {};
+
+            if (dto.name) {
+                userUpdateData.name = dto.name;
+            }
+
+            if (avatar) {
+                userUpdateData.avatar = avatar;
+            }
+
+            if (dto.email) {
+                userUpdateData.email = dto.email;
+            }
+
+            if (dto.phone) {
+                userUpdateData.phone = dto.phone;
+            }
+
+            await this.prisma.user.update({
+                where: { id: user.id },
+                data: userUpdateData
+            })
+
+            return {
+                message: 'Profile updated successfully',
+            }
         } catch (error) {
             throw error;
         }
