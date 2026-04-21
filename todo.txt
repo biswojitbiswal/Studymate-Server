@@ -1,12 +1,7 @@
--Add validation and check the class capacity in every step for preventing race condition
--Send totalenrollment per class and for a class
--Send IsPurchased & isWishlisted for those who already loggedin
--Discuss about the the checkout flow for tutor(should we give option & how to prevent)
--Implement Session apis
--Implement permission for join a meeting
--Implement Wishlist
--Implement the follow/unfollow functionality
--Implement Rating/Reviews functionality
+-Notification Job Queue:-
+    👉 “add rate limiting”
+    👉 “dead letter queue”
+    👉 “email templates system”
 -Implement the Invoice functionality
--Implement the Assgned task module
+
 

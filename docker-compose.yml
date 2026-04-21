@@ -1,0 +1,28 @@
+services:
+  app:
+    build: .
+    container_name: studynest-app
+    ports:
+      - "4040:4040"
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  redis:
+    image: redis
+    container_name: studynest-redis
+
+  worker:
+    build: .
+    container_name: studynest-worker
+    command: ["node", "dist/worker/worker.js"]
+    deploy:
+      replicas: 3
+    env_file:
+      - .env
+    depends_on:
+      - redis

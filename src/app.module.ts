@@ -37,6 +37,7 @@ import { WishlistModule } from 'wishlist/wishlist.module';
 import { ReviewModule } from 'review/review.module';
 import { NotificationModule } from 'notification/notification.module';
 import { WebsocketModule } from 'websocket/websocket.module';
+import { QueueModule } from 'queue/queue.module';
 
 
 @Module({
@@ -74,8 +75,8 @@ import { WebsocketModule } from 'websocket/websocket.module';
     WishlistModule,
     ReviewModule,
     NotificationModule,
-    WebsocketModule
-    
+    WebsocketModule,
+    QueueModule
   ],
   providers: [
     {

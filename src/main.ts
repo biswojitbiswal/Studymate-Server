@@ -83,7 +83,7 @@ async function bootstrap() {
   })
 
 
-  const port = Number(process.env.PORT);
+  const port = Number(process.env.PORT) || 3001;
 
   if (!port) {
     throw new Error('PORT not found. Railway did not assign a port.');
