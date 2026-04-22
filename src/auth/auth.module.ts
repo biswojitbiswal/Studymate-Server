@@ -4,8 +4,8 @@ import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtModule } from "@nestjs/jwt";
 import { JwtStrategy } from "./dtos/jwt.strategy";
-import { EmailModule } from "src/mail/mail.module";
 import { CloudinaryModule } from "cloudinary/cloudinary.module";
+import { QueueModule } from "queue/queue.module";
 
 @Module({
     imports: [
@@ -14,8 +14,8 @@ import { CloudinaryModule } from "cloudinary/cloudinary.module";
             signOptions: { expiresIn: '7d' }, // token expiry 
         }),
         PrismaModule,
-        EmailModule,
-        CloudinaryModule
+        CloudinaryModule,
+        QueueModule,
     ],
     controllers: [AuthController],
     providers: [AuthService, JwtStrategy]

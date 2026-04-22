@@ -22,7 +22,6 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { MeetingModule } from './meeting/meeting.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CronModule } from './cron-job/cron-job.module';
-import { EmailModule } from './mail/mail.module';
 import { StudentModule } from './student/student.module';
 import { TutorModule } from './tutor/tutor.module';
 import { CommissionModule } from './commision/commission.module';
@@ -61,7 +60,6 @@ import { QueueModule } from 'queue/queue.module';
     TutorScheduleModule,
     AttendanceModule,
     MeetingModule,
-    EmailModule,
     StudentModule,
     TutorModule,
     CommissionModule,

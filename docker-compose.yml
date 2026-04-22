@@ -18,7 +18,7 @@ services:
 
   worker:
     build: .
-    container_name: studynest-worker
+    # container_name: studynest-worker
     command: ["node", "dist/worker/worker.js"]
     deploy:
       replicas: 3

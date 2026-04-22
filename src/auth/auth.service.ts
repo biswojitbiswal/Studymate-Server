@@ -9,6 +9,8 @@ import { EmailService } from "src/mail/mail.service";
 import { verificationEmailHtml } from "src/common/emails/verification-email";
 import { forgotPasswordEmailHtml } from "src/common/emails/forgot-password";
 import { CloudinaryService } from "cloudinary/cloudinary.service";
+import { QueueService } from "queue/queue.service";
+import { use } from "passport";
 
 
 @Injectable({})
@@ -16,8 +18,8 @@ export class AuthService {
     constructor(
         private readonly prisma: PrismaService,
         private jwtService: JwtService,
-        private readonly email: EmailService,
-        private readonly cloudinary: CloudinaryService
+        private readonly cloudinary: CloudinaryService,
+        private readonly queue: QueueService
     ) { }
 
     private buildEmailVerificationUrl(token: string) {
@@ -67,7 +69,8 @@ export class AuthService {
             const html = verificationEmailHtml(verifyUrl)
 
             // 🔔 resend verification email here
-            await this.email.sendEmail(existing.email, "Verify Your Email", html);
+            await this.queue.addNotificationJob({ type: "email", to: existing.email, subject: "Verify Your Email", html })
+
 
             return {
                 message: 'Verification email resent. Please verify your email.',
@@ -126,7 +129,7 @@ export class AuthService {
         const html = verificationEmailHtml(verifyUrl)
 
         // 🔔 resend verification email here
-        const res = await this.email.sendEmail(user.email, "Verify Your Email", html);
+        await this.queue.addNotificationJob({ type: "email", to: user.email, subject: "Verify Your Email", html })
 
         return {
             message: 'Signup successful. Please verify your email.',
@@ -371,7 +374,8 @@ export class AuthService {
 
             const html = forgotPasswordEmailHtml(user.name ?? 'User', resetLink)
 
-            // await this.email.sendEmail(user.email, "Reset Password", html)
+            await this.queue.addNotificationJob({ type: "email", to: user.email, subject: "Reset Password", html })
+
 
             return {
                 message: 'Resent link sent successfully',

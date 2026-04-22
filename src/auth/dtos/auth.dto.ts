@@ -4,15 +4,15 @@ import { Roles, AuthProvider, SignupIntent } from '@prisma/client';
 export class SignupDto {
     @IsNotEmpty()
     @IsString()
-    name: string;
+    name!: string;
 
     @IsNotEmpty()
     @IsEmail()
-    email: string;
+    email!: string;
 
     @ValidateIf((o) => o.provider === AuthProvider.CREDENTIALS)
     @IsOptional()
-    @IsPhoneNumber() // auto detects format; you can use 'IN' for India or any country
+    @IsString() // auto detects format; you can use 'IN' for India or any country
     phone?: string;
 
     @ValidateIf((o) => o.provider === AuthProvider.CREDENTIALS)

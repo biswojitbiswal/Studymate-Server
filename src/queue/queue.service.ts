@@ -55,6 +55,9 @@ export class QueueService {
 
 
     async addNotificationJob(data: NotificationJob) {
+
+        // console.log(data, "==============");
+        
         let uniqueString = "";
 
         switch (data.type) {

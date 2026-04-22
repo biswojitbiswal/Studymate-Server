@@ -1,3 +1,5 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
 import { Worker } from "bullmq";
 import IORedis from "ioredis";
 import { sendEmail } from "common/utils/send-email.util";
@@ -34,7 +36,7 @@ const worker = new Worker(
         const alreadySent = await connection.get(key);
 
         if (alreadySent) {
-          console.log("Duplicate email skipped");
+          // console.log("Duplicate email skipped");
           return;
         }
 
@@ -48,13 +50,13 @@ const worker = new Worker(
 
       case "sms": {
         const { to, message } = job.data;
-        console.log(`Sending SMS to ${to}: ${message}`);
+        // console.log(`Sending SMS to ${to}: ${message}`);
         break;
       }
 
       case "push": {
         const { to, title, body } = job.data;
-        console.log(`Sending Push to ${to}: ${title} - ${body}`);
+        // console.log(`Sending Push to ${to}: ${title} - ${body}`);
         break;
       }
 
