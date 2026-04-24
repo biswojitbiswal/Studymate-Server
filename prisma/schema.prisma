@@ -50,6 +50,9 @@ model User {
   hashedRefreshToken      String?
   refreshTokenExpiresAt   DateTime?
 
+  lastSeenAt              DateTime
+  isOnline                Boolean
+
   student                 Student?
   tutor                   Tutor?
 
@@ -963,6 +966,8 @@ model Conversation{
 
   type                  ConversationType
 
+  pinnedMessageId       String?          @db.ObjectId
+
   createdById           String           @db.ObjectId
   createdBy             User             @relation(fields: [createdById], references: [id])
 
@@ -996,6 +1001,8 @@ model ConversationParticipants{
 
   joinedAt              DateTime        @default(now())
 
+  isMuted               Boolean         @default(false)
+
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 
@@ -1021,10 +1028,32 @@ model Message{
 
   content               String
 
+  replyToId             String?         @db.ObjectId
+  replyTo               Message?        @relation("Reply", fields: [replyToId], references: [id])
+
   type                  MessageType     @default(TEXT)
+
+  isPinned              Boolean         @default(false)
+  isDeleted             Boolean         @default(false)
 
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 
-  @@unique([conversationId])
+  @@index([conversationId])
+  @@index([content])
+}
+
+
+model MessageHidden {
+  id                String               @id @default(auto()) @map("_id") @db.ObjectId
+
+  userId            String               @db.ObjectId
+  user              User                 @relation(fields: [userId], references: [id])
+
+  messageId         String               @db.ObjectId
+  message           Message              @relation(fields: [messageId], references: [id])
+
+  createdAt         DateTime             @default(now())
+
+  @@unique([userId, messageId])
 }
