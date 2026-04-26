@@ -9,7 +9,7 @@ export class NotificationService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly preferenceService: NotificationPreferenceService,
-        private readonly notificationGateway: NotificationGateway,
+        // private readonly notificationGateway: NotificationGateway,
         private readonly appGateway: WebsocketGateway
     ) { }
 
@@ -33,7 +33,7 @@ export class NotificationService {
                     },
                 });
 
-                this.notificationGateway.sendToUser(data?.userId, notification);
+                await this.appGateway.sendToUser(data?.userId, notification);
             }
 
             return notification

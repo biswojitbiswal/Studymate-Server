@@ -37,6 +37,7 @@ import { ReviewModule } from 'review/review.module';
 import { NotificationModule } from 'notification/notification.module';
 import { WebsocketModule } from 'websocket/websocket.module';
 import { QueueModule } from 'queue/queue.module';
+import { ChatModule } from 'chat/chat.module';
 
 
 @Module({
@@ -74,7 +75,8 @@ import { QueueModule } from 'queue/queue.module';
     ReviewModule,
     NotificationModule,
     WebsocketModule,
-    QueueModule
+    QueueModule,
+    ChatModule
   ],
   providers: [
     {

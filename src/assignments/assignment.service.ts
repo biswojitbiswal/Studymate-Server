@@ -199,6 +199,7 @@ export class AssignmentService {
                             id: true,
                             user: {
                                 select: {
+                                    id: true,
                                     name: true,
                                     avatar: true
                                 }
@@ -224,6 +225,7 @@ export class AssignmentService {
                 students: tasks.map(task => ({
                     taskId: task.id,
                     studentId: task.student.id,
+                    studentUserId: task.student.user.id,
                     name: task.student.user.name,
                     avatar: task.student.user.avatar,
                     status: task.status

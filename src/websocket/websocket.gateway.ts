@@ -5,6 +5,9 @@ import {
   WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  SubscribeMessage,
+  ConnectedSocket,
+  MessageBody,
 } from '@nestjs/websockets';
 import { PrismaService } from 'prisma/prisma.service';
 
@@ -46,6 +49,7 @@ export class WebsocketGateway
         throw new NotFoundException("User Not Found");
       }
 
+      client.data.user = user;
       client.join(user.id);
 
       // console.log('Client connected:', user.id);
@@ -71,13 +75,50 @@ export class WebsocketGateway
   }
 
 
-  // ✅ CENTRAL EMIT FUNCTION
-  sendToUser(userId: string, payload: any) {
-    // console.log("📡 Emitting to:", userId);
-    this.server.to(userId).emit('notification', payload);
+  async sendToUser(userId: string, notification: any) {
+
+    this.server.to(userId).emit('notification', notification);
+
+    const count = await this.prisma.notification.count({
+      where: { userId, isRead: false },
+    });
+
+    this.server.to(userId).emit('notification_count', count);
   }
 
-  async sendCount(userId: string, count: number) {
-    this.server.to(userId).emit('notification_count', count);
+
+  async sendToMultipleUsers(userIds: string[], notification: any) {
+    for (const userId of userIds) {
+      this.server.to(userId).emit('notification', notification);
+
+      const count = await this.prisma.notification.count({
+        where: { userId, isRead: false },
+      });
+
+      this.server.to(userId).emit('notification_count', count);
+    }
+  }
+
+  sendToConversation(conversationId: string, payload: any) {
+    this.server.to(conversationId).emit('new_message', payload);
+  }
+
+
+
+  @SubscribeMessage('join_conversation')
+  handleJoinConversation(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() conversationId: string,
+  ) {
+    client.join(conversationId);
+  }
+
+
+  @SubscribeMessage('leave_conversation')
+  handleLeaveConversation(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() conversationId: string,
+  ) {
+    client.leave(conversationId);
   }
 }

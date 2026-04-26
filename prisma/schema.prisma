@@ -56,6 +56,7 @@ model User {
   tutor                   Tutor?
 
   NotificationPreference  NotificationPreference?
+  conversationsCreated    Conversation[]
   conversationParticipants ConversationParticipants[]
   messages                Message[]
   messageReceipts         MessageReceipt[]
@@ -462,7 +463,7 @@ model TuitionClass{
   createdAt               DateTime                    @default(now())
   updatedAt               DateTime                    @updatedAt
 
-  conversation            Conversation?
+  conversation            Conversation[]
 
   board                   Board?                      @relation(fields: [boardId], references: [id])
   subject                 Subject                     @relation(fields: [subjectId], references: [id])
@@ -966,10 +967,12 @@ enum Mode{
 model Conversation{
   id                    String          @id @default(auto()) @map("_id") @db.ObjectId
 
-  classId               String?          @db.ObjectId @unique
+  classId               String?          @db.ObjectId
   klass                 TuitionClass?    @relation(fields: [classId], references: [id])
 
   type                  ConversationType
+
+  lastMessageId         String?          @db.ObjectId
 
   pinnedMessageId       String?          @db.ObjectId
   pinnedMessage         Message?         @relation("PinnedMessage", fields: [pinnedMessageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -1041,7 +1044,8 @@ model Message{
   content               String
 
   replyToId             String?         @db.ObjectId
-  replyTo               Message?        @relation("Reply", fields: [replyToId], references: [id])
+  replyTo               Message?        @relation("Reply", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
   replies               Message[]       @relation("Reply")
 
   type                  MessageType     @default(TEXT)
@@ -1065,7 +1069,7 @@ model MessageReceipt {
   id                String        @id @default(auto()) @map("_id") @db.ObjectId
 
   messageId         String        @db.ObjectId
-  message           Message       @relation(fields: [messageId], references: [id])
+  message           Message       @relation(fields: [messageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   userId            String        @db.ObjectId
   user              User          @relation(fields: [userId], references: [id])
@@ -1083,7 +1087,7 @@ model MessageHidden {
   user              User                 @relation(fields: [userId], references: [id])
 
   messageId         String               @db.ObjectId
-  message           Message              @relation(fields: [messageId], references: [id])
+  message           Message              @relation(fields: [messageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   createdAt         DateTime             @default(now())
 
