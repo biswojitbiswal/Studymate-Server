@@ -38,6 +38,7 @@ import { NotificationModule } from 'notification/notification.module';
 import { WebsocketModule } from 'websocket/websocket.module';
 import { QueueModule } from 'queue/queue.module';
 import { ChatModule } from 'chat/chat.module';
+import { PayoutModule } from 'payout/payout.module';
 
 
 @Module({
@@ -76,7 +77,8 @@ import { ChatModule } from 'chat/chat.module';
     NotificationModule,
     WebsocketModule,
     QueueModule,
-    ChatModule
+    ChatModule,
+    PayoutModule
   ],
   providers: [
     {

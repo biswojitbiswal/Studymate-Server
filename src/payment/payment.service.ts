@@ -8,6 +8,7 @@ import { PaymentVerifyDto } from "./dtos/payment.dto";
 import * as crypto from 'crypto'
 import { CouponService } from "src/coupon/coupon.service";
 import { ClassEnrollmentService } from "src/class-enrollment/class-enrollment.service";
+import { LedgerService } from "payout/ledger.service";
 
 @Injectable({})
 export class PaymentService {
@@ -16,7 +17,8 @@ export class PaymentService {
         private readonly prisma: PrismaService,
         private readonly config: ConfigService,
         private readonly couponService: CouponService,
-        private readonly classEnrollmentService: ClassEnrollmentService
+        private readonly classEnrollmentService: ClassEnrollmentService,
+        private readonly ledgerService: LedgerService
     ) {
         this.razorpay = new Razorpay({
             key_id: this.config.get<string>("RAZOR_PAY_API_KEY"),
@@ -248,12 +250,43 @@ export class PaymentService {
                 }
             })
 
+
             await this.couponService.redeemCouponAfterPayment(tx, transaction.orderId);
 
             await this.classEnrollmentService.createEnrollmentFromOrder(tx, transaction.orderId);
+
+            const klass = await tx.tuitionClass.findUnique({
+                where: { id: order.productId },
+                select: {
+                    id: true,
+                    tutorId: true
+                }
+            })
+
+            if (!klass) {
+                return;
+            }
+            const total = order.totalAmount;
+            const tax = order.taxAmount;
+            const commission = order.commissionAmount;
+            const discount = order.discountAmount ?? 0;
+
+            // initial split
+            let tutorDiscount = discount / 2;
+            let platformDiscount = discount / 2;
+
+            // cap platform contribution
+            if (platformDiscount > commission) {
+                platformDiscount = commission;
+                tutorDiscount = discount - platformDiscount;
+            }
+
+            const tutorPayout = total - tax - commission - tutorDiscount;
+            const platformRevenue = commission - platformDiscount;
+            await this.ledgerService.create({ tutorId: klass?.tutorId, amount: tutorPayout, referenceId: klass?.id });
         });
 
-        console.log("Order marked paid and enrollment created");
+        console.log("Order marked paid and enrollment created, ledger & wallet created");
     }
 
 

@@ -1093,3 +1093,88 @@ model MessageHidden {
 
   @@unique([userId, messageId])
 }
+
+
+
+model Ledger {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  tutorId     String   @db.ObjectId
+
+  type        LedgerType
+  amount      Float      // always in paise
+
+  source      LedgerSource
+  status      LedgerStatus @default(PENDING)
+
+  referenceId String?  // classId / withdrawalId / refundId
+  description String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([tutorId])
+  @@index([status])
+}
+
+
+model Wallet {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  tutorId          String   @unique @db.ObjectId
+
+  availableBalance Float      @default(0)
+  pendingBalance   Float      @default(0)
+
+  totalEarnings    Float      @default(0)
+  totalWithdrawn   Float      @default(0)
+
+  updatedAt        DateTime @updatedAt
+}
+
+
+model Withdrawal {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  tutorId       String   @db.ObjectId
+
+  amount        Float`
+
+  status        WithdrawalStatus @default(SUCCESS)
+
+  method        WithdrawalMethod?
+
+  accountName   String?
+  accountNumber String?
+  ifsc          String?
+  upiId         String?
+
+  createdAt     DateTime @default(now())
+  processedAt   DateTime @default(now())
+}
+
+
+enum LedgerType {
+  CREDIT
+  DEBIT
+}
+
+enum LedgerSource {
+  CLASS_PURCHASE
+  WITHDRAWAL
+  REFUND
+  ADJUSTMENT
+}
+
+enum LedgerStatus {
+  PENDING
+  AVAILABLE
+  COMPLETED
+  FAILED
+}
+
+enum WithdrawalStatus {
+  SUCCESS
+  FAILED
+}
+
+enum WithdrawalMethod {
+  BANK_TRANSFER
+  UPI
+}

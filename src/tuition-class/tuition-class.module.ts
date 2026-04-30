@@ -7,9 +7,10 @@ import { PublicClassController } from "./public-class.controller";
 import { CloudinaryModule } from "src/cloudinary/cloudinary.module";
 import { TuitionClassJob } from "./tuition-class.jobs";
 import { NotificationModule } from "notification/notification.module";
+import { PayoutModule } from "payout/payout.module";
 
 @Module({
-    imports: [PrismaModule, CloudinaryModule, NotificationModule],
+    imports: [PrismaModule, CloudinaryModule, NotificationModule, PayoutModule],
     controllers: [TutorClassController, AdminClassController, PublicClassController],
     providers: [TuitionClassService, TuitionClassJob],
     exports: [TuitionClassJob]
