@@ -1134,7 +1134,7 @@ model Withdrawal {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   tutorId       String   @db.ObjectId
 
-  amount        Float`
+  amount        Float
 
   status        WithdrawalStatus @default(SUCCESS)
 

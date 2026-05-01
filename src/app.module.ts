@@ -39,6 +39,7 @@ import { WebsocketModule } from 'websocket/websocket.module';
 import { QueueModule } from 'queue/queue.module';
 import { ChatModule } from 'chat/chat.module';
 import { PayoutModule } from 'payout/payout.module';
+import { AdminModule } from 'admin/admin.module';
 
 
 @Module({
@@ -78,7 +79,8 @@ import { PayoutModule } from 'payout/payout.module';
     WebsocketModule,
     QueueModule,
     ChatModule,
-    PayoutModule
+    PayoutModule,
+    AdminModule
   ],
   providers: [
     {
