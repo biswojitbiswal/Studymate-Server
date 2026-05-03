@@ -99,10 +99,73 @@ export class WebsocketGateway
     }
   }
 
-  sendToConversation(conversationId: string, payload: any) {
-    this.server.to(conversationId).emit('new_message', payload);
+  async sendToConversation(conversationId: string, payload: any) {
+    const participants = await this.prisma.conversationParticipants.findMany({
+      where: { conversationId },
+      select: { userId: true },
+    });
+
+    participants.forEach((p) => {
+      this.server.to(p.userId).emit("new_message", payload);
+    });
   }
 
+
+  @SubscribeMessage("messages_seen")
+  async handleMessagesSeen(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { conversationId: string }
+  ) {
+    const userId = client.data.user?.id;
+
+    if (!userId) {
+      throw new BadRequestException("Invalid user");
+    }
+
+    // ✅ Security check
+    const isParticipant = await this.prisma.conversationParticipants.findFirst({
+      where: {
+        conversationId: data.conversationId,
+        userId,
+      },
+    });
+
+    if (!isParticipant) {
+      throw new BadRequestException("Not part of this conversation");
+    }
+    console.log(data.conversationId, "=====");
+
+    // 🔥 Update DB
+    const result = await this.prisma.messageReceipt.updateMany({
+      where: {
+        userId,
+        seenAt: null,
+        message: {
+          conversationId: data.conversationId,
+          senderId: { not: userId },
+        },
+      },
+      data: {
+        seenAt: new Date(),
+      },
+    });
+    if (result.count === 0) return;
+
+    // ✅ Debug
+    console.log("Seen updated now:", result.count);
+
+    const participants = await this.prisma.conversationParticipants.findMany({
+      where: { conversationId: data.conversationId },
+      select: { userId: true },
+    });
+
+    participants.forEach((p) => {
+      this.server.to(p.userId).emit("messages_seen", {
+        conversationId: data.conversationId,
+        userId,
+      });
+    });
+  }
 
 
   @SubscribeMessage('join_conversation')

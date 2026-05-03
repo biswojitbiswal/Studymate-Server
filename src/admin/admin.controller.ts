@@ -1,8 +1,9 @@
-import { Controller, Get, UseGuards } from "@nestjs/common";
+import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { AdminService } from "./admin.service";
 import { AuthGuard } from "common/guards/auth.guard";
 import { Roles } from "common/decorator/roles.decorator";
 import { GetCurrentUserId } from "common/decorator/get-current-user-id.decorator";
+import { TutorAnalyticsDto } from "./dtos/admin.dto";
 
 @Controller({
     path: 'admin',
@@ -24,7 +25,7 @@ export class AdminController{
     @UseGuards(AuthGuard)
     @Roles('TUTOR')
     @Get('tutor/analytics')
-    async tutorAnalytics(@GetCurrentUserId() userId: string){
-        return await this.admin.tutorAnalytics(userId)
+    async tutorAnalytics(@GetCurrentUserId() userId: string, @Query() dto: TutorAnalyticsDto){
+        return await this.admin.tutorAnalytics(userId, dto)
     }
 }

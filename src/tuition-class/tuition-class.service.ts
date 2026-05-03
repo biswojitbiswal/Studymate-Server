@@ -537,10 +537,16 @@ export class TuitionClassService {
                     tutor: {
                         select: {
                             id: true,
+                            title: true,
+                            yearsOfExp: true,
+                            bio: true,
+                            qualification: true,
+                            rating: true,
                             user: {
                                 select: {
                                     id: true,
                                     name: true,
+                                    avatar: true,
                                 }
                             }
                         }

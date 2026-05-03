@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ChatService } from "./chat.service";
 import { RolesGuard } from "common/guards/roles.guard";
 import { Roles } from "common/decorator/roles.decorator";
@@ -59,4 +59,31 @@ export class ChatController {
         return await this.chat.getMessages(dto, userId);
     }
 
+
+    @UseGuards(AuthGuard)
+    @Delete("messages/:id/delete-for-me")
+    async deleteForMe(@Param("id") id: string, @GetCurrentUserId() userId: string) {
+        return await this.chat.deleteForMe(id, userId);
+    }
+
+
+    @UseGuards(AuthGuard)
+    @Delete("messages/:id/delete-for-everyone")
+    async deleteForEveryone(@Param("id") id: string, @GetCurrentUserId() userId: string) {
+        return await this.chat.deleteForEveryone(id, userId);
+    }
+
+
+    @UseGuards(AuthGuard)
+    @Post("messages/:id/toggle-pin")
+    async togglePin(@Param("id") id: string, @GetCurrentUserId() userId: string) {
+        return await this.chat.togglePinMessage(id, userId);
+    }
+
+
+    @UseGuards(AuthGuard)
+    @Post("conversations/:id/toggle-mute")
+    toggleMute(@Param("id") id: string, @GetCurrentUserId() userId: string) {
+        return this.chat.toggleMute(id, userId);
+    }
 }

@@ -5,3 +5,18 @@
 -Implement the Invoice functionality
 
 
+STEP 1 → Message Seen UI and event
+STEP 2 → New message divider
+STEP 3 → Show unread count - Done
+STEP 4 → Conversation List Not updating correctly - Done
+STEP 5 → Message grouping UI
+STEP 6 → Delete From Everyone - Done
+STEP 7 → Delete From Message - Done
+STEP 8 → Reply For a Message - Done
+STEP 9 → Pin/Unpin message for a conersation - Done
+STEP 14 → Mute functionality - Done
+
+STEP 10 → Fix the UI/UX
+STEP 11 → Typing Indicator
+STEP 12 → Last Seen
+STEP 13 → Onlinne indicator

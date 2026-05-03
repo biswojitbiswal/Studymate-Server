@@ -544,7 +544,7 @@ model Session {
   @@index([studentId])
   @@index([date])
 }
-
+d
 
 
 enum AttendanceStatus{
