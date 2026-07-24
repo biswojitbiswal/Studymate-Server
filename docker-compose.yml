@@ -1,62 +1,35 @@
-# services:
-#   app:
-#     build: .
-#     container_name: studynest-app
-#     ports:
-#       - "4040:4040"
-#     depends_on:
-#       - redis
-#     env_file:
-#       - .env
-#     environment:
-#       - REDIS_HOST=redis
-#       - REDIS_PORT=6379
-#     restart: always
-
-#   redis:
-#     image: redis:7
-#     container_name: studynest-redis
-#     ports:
-#       - "6379:6379"
-#     restart: always
-
-#   worker:
-#     build: .
-#     command: ["node", "dist/worker/worker.js"]
-#     env_file:
-#       - .env
-#     environment:
-#       - REDIS_HOST=redis
-#       - REDIS_PORT=6379
-#     depends_on:
-#       - redis
-#     restart: always
-
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+
     container_name: studynest-app
+
     ports:
       - "4040:4040"
-    depends_on:
-      - redis
+
     env_file:
       - .env
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
 
-  redis:
-    image: redis
-    container_name: studynest-redis
+    depends_on:
+      - redis
 
   worker:
-    build: .
-    # container_name: studynest-worker
-    command: ["node", "dist/worker/worker.js"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    command: node dist/worker/worker.js
+
     deploy:
       replicas: 3
+
     env_file:
       - .env
+
     depends_on:
       - redis
+
+  redis:
+    image: redis:7

@@ -66,3 +66,5 @@ Nest calls them in order:
 1. Prisma filter
 2. Mongo filter
 3. AllExceptions filter
+
+"start:dev": "nest start --watch --webpack"

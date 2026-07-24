@@ -664,9 +664,7 @@ export class AdminService {
             ])
 
 
-            // const earningsOverview: {day: }
 
-// console.log("Hello Docker");
             return {
                 data: {
                     totalUser,

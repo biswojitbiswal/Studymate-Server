@@ -1,0 +1,45 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+
+    container_name: studynest-app-dev
+
+    ports:
+      - "4040:4040"
+
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+    command: npm run start:dev
+
+    env_file:
+      - .env
+
+    depends_on:
+      - redis
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+
+    container_name: studynest-worker-dev
+
+    command: npm run start:worker
+
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+    env_file:
+      - .env
+
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7
+    container_name: studynest-redis-dev

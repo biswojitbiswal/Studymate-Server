@@ -9,7 +9,7 @@
     "build": "prisma generate && node ./node_modules/@nestjs/cli/bin/nest.js build",
     "start": "node dist/main.js",
     "start:prod": "node dist/main.js",
-    "start:dev": "nest start --watch",
+    "start:dev": "nest start --watch --poll",
     "start:worker": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/worker/worker.ts",
     "dev": "concurrently \"npm run start:dev\" \"npm run start:worker\"",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
