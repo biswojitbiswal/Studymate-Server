@@ -769,6 +769,8 @@ export class TuitionClassService {
                 };
             }
 
+            
+
             /* ---------- Query ---------- */
             const [data, total] = await Promise.all([
                 this.prisma.tuitionClass.findMany({

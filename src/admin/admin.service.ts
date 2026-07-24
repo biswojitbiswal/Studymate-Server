@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { OrderStatus, Prisma, Roles, TutorStatus } from "@prisma/client";
 import { TaskStatus, TaskType } from "common/enums/task.enum";
 import { ClassStatus } from "common/enums/tuition-class.enum";
 import { PrismaService } from "prisma/prisma.service";
-import { TutorAnalyticsDto } from "./dtos/admin.dto";
+import { AdminAnalyticsDto, TutorAnalyticsDto } from "./dtos/admin.dto";
 
 @Injectable({})
 export class AdminService {
@@ -478,6 +478,215 @@ export class AdminService {
             };
         } catch (error) {
             throw error;
+        }
+    }
+
+    async adminAnalytics(dto: AdminAnalyticsDto) {
+        try {
+            const fromDt = new Date(dto.fromDate);
+            const toDt = new Date(dto.toDate);
+            toDt.setHours(23, 59, 59, 999);
+
+            const diffInDays = Math.ceil((toDt.getTime() - fromDt.getTime()) / (1000 * 60 * 60 * 24));
+
+            if (diffInDays <= 15) {
+                // Group by day
+            }
+            else if (diffInDays <= 110) {
+                // Group by week
+            }
+            else if (diffInDays <= 620) {
+                // Group by month
+            }
+            else {
+                // Group by year
+            }
+
+            const [
+                totalUser,
+                totalStudent,
+                totalTutor,
+                totalTutorReq,
+                totalClasses,
+                ongoingClasses,
+                completedClasses,
+                totalEarning,
+                totalTaxes,
+                totalPayouts,
+                totalCommission,
+                totalDiscount,
+                earnings
+            ] = await this.prisma.$transaction([
+                this.prisma.user.count({
+                    where: {
+                        createdAt: {
+                            gte: fromDt,
+                            lte: toDt
+                        }
+                    },
+                }),
+                this.prisma.user.count({
+                    where: {
+                        role: Roles.STUDENT,
+                        createdAt: {
+                            gte: fromDt,
+                            lte: toDt
+                        }
+                    }
+                }),
+                this.prisma.user.count({
+                    where: {
+                        role: Roles.TUTOR,
+                        tutor: {
+                            tutorStatus: TutorStatus.APPROVED,
+                            createdAt: {
+                                gte: fromDt,
+                                lte: toDt
+                            }
+                        }
+                    }
+                }),
+                this.prisma.user.count({
+                    where: {
+                        role: Roles.STUDENT,
+                        signupIntent: Roles.TUTOR,
+                        tutor: {
+                            tutorStatus: TutorStatus.PENDING_REVIEW,
+                            createdAt: {
+                                gte: fromDt,
+                                lte: toDt
+                            }
+                        }
+                    }
+                }),
+                this.prisma.tuitionClass.count({
+                    where: {
+                        status: { notIn: [ClassStatus.DRAFT, ClassStatus.ARCHIVED] }
+                    }
+                }),
+                this.prisma.tuitionClass.count({
+                    where: {
+                        status: ClassStatus.ACTIVE
+                    }
+                }),
+                this.prisma.tuitionClass.count({
+                    where: {
+                        status: ClassStatus.COMPLETED
+                    }
+                }),
+                this.prisma.order.aggregate({
+                    where: {
+                        status: OrderStatus.PAID,
+                        createdAt: {
+                            gte: fromDt,
+                            lte: toDt
+                        }
+                    },
+                    _sum: { totalAmount: true }
+                }),
+                this.prisma.order.aggregate({
+                    where: {
+                        status: OrderStatus.PAID,
+                        createdAt: {
+                            gte: fromDt,
+                            lte: toDt
+                        }
+                    },
+                    _sum: { taxAmount: true }
+                }),
+                this.prisma.order.aggregate({
+                    where: {
+                        status: OrderStatus.PAID,
+                        createdAt: {
+                            gte: fromDt,
+                            lte: toDt
+                        }
+                    },
+                    _sum: { basePrice: true }
+                }),
+                this.prisma.order.aggregate({
+                    where: {
+                        status: OrderStatus.PAID,
+                        createdAt: {
+                            gte: fromDt,
+                            lte: toDt
+                        }
+                    },
+                    _sum: { commissionAmount: true }
+                }),
+                this.prisma.order.aggregate({
+                    where: {
+                        status: OrderStatus.PAID,
+                        createdAt: {
+                            gte: fromDt,
+                            lte: toDt
+                        }
+                    },
+                    _sum: { discountAmount: true }
+                }),
+                this.prisma.order.aggregateRaw({
+                    pipeline: [
+                        {
+                            $match: {
+                                status: OrderStatus.PAID,
+                                createdAt: {
+                                    gte: fromDt,
+                                    lte: toDt
+                                }
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: {
+                                    $dateToString: {
+                                        format: "%Y-%m-%d",
+                                        date: "$createdAt",
+                                    },
+                                },
+                                earning: {
+                                    $sum: {
+                                        $subtract: [
+                                            "$commissionAmount",
+                                            "$discountAmount",
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            $sort: {
+                                _id: 1,
+                            },
+                        },
+                    ]
+
+                })
+            ])
+
+
+            // const earningsOverview: {day: }
+
+// console.log("Hello Docker");
+            return {
+                data: {
+                    totalUser,
+                    totalStudent,
+                    totalTutor,
+                    totalTutorReq,
+                    totalClasses,
+                    ongoingClasses,
+                    completedClasses,
+                    totalEarning,
+                    totalTaxes,
+                    totalPayouts,
+                    totalCommission,
+                    totalDiscount,
+                    earnings
+                }
+            }
+        } catch (error) {
+            console.log(error);
+
         }
     }
 }
