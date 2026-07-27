@@ -4,6 +4,7 @@ import { TaskStatus, TaskType } from "common/enums/task.enum";
 import { ClassStatus } from "common/enums/tuition-class.enum";
 import { PrismaService } from "prisma/prisma.service";
 import { AdminAnalyticsDto, TutorAnalyticsDto } from "./dtos/admin.dto";
+import { SessionStatus } from "common/enums/session.enum";
 
 @Injectable({})
 export class AdminService {
@@ -489,17 +490,50 @@ export class AdminService {
 
             const diffInDays = Math.ceil((toDt.getTime() - fromDt.getTime()) / (1000 * 60 * 60 * 24));
 
+            let groupId;
+
             if (diffInDays <= 15) {
                 // Group by day
+                groupId = {
+                    $dateToString: {
+                        format: "%Y-%m-%d",
+                        date: "$createdAt"
+                    }
+                };
             }
             else if (diffInDays <= 110) {
                 // Group by week
+                groupId = {
+                    // $dateTrunc: {
+                    //     date: "$createdAt",
+                    //     unit: "week"
+                    // }
+                    year: { $isoWeekYear: "$createdAt" },
+                    week: { $isoWeek: "$createdAt" }
+                }
             }
             else if (diffInDays <= 620) {
                 // Group by month
+                groupId = {
+                    $dateToString: {
+                        format: "%Y-%m",
+                        date: "$createdAt"
+                    }
+                }
             }
             else {
                 // Group by year
+                groupId = {
+                    $dateToString: {
+                        format: "%Y",
+                        date: "$createdAt"
+                    }
+                }
+            }
+
+            interface SessionOverview {
+                _id: string;
+                count: number;
             }
 
             const [
@@ -515,7 +549,8 @@ export class AdminService {
                 totalPayouts,
                 totalCommission,
                 totalDiscount,
-                earnings
+                earnings,
+                sessionsRaw,
             ] = await this.prisma.$transaction([
                 this.prisma.user.count({
                     where: {
@@ -630,57 +665,90 @@ export class AdminService {
                             $match: {
                                 status: OrderStatus.PAID,
                                 createdAt: {
-                                    gte: fromDt,
-                                    lte: toDt
+                                    $gte: { $date: fromDt.toISOString() },
+                                    $lte: { $date: toDt.toISOString() }
                                 }
                             }
                         },
                         {
                             $group: {
-                                _id: {
-                                    $dateToString: {
-                                        format: "%Y-%m-%d",
-                                        date: "$createdAt",
-                                    },
-                                },
-                                earning: {
+                                _id: groupId,
+                                earnings: {
                                     $sum: {
                                         $subtract: [
                                             "$commissionAmount",
-                                            "$discountAmount",
-                                        ],
-                                    },
-                                },
-                            },
+                                            {
+                                                $ifNull: ["$discountAmount", 0]
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
                         },
                         {
                             $sort: {
-                                _id: 1,
-                            },
-                        },
+                                _id: 1
+                            }
+                        }
                     ]
-
+                }),
+                this.prisma.session.aggregateRaw({
+                    pipeline: [
+                        {
+                            $match: {
+                                status: { $in: [SessionStatus.SCHEDULED, SessionStatus.COMPLETED, SessionStatus.PENDING_TUTOR_APPROVAL] },
+                                date: {
+                                    $gte: { $date: fromDt.toISOString() },
+                                    $lte: { $date: toDt.toISOString() }
+                                }
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: "$sessionType",
+                                count: {
+                                    $sum: 1
+                                }
+                            }
+                        },
+                        {
+                            $sort: {
+                                _id: 1
+                            }
+                        }
+                    ]
                 })
             ])
+
+            const sessions = sessionsRaw as unknown as SessionOverview[];
+
+            const sessionOverview = {
+                REGULAR: 0,
+                EXTRA: 0,
+                DOUBT: 0,
+            };
+
+            for (const item of sessions) {
+                sessionOverview[item._id] = item.count;
+            }
 
 
 
             return {
-                data: {
-                    totalUser,
-                    totalStudent,
-                    totalTutor,
-                    totalTutorReq,
-                    totalClasses,
-                    ongoingClasses,
-                    completedClasses,
-                    totalEarning,
-                    totalTaxes,
-                    totalPayouts,
-                    totalCommission,
-                    totalDiscount,
-                    earnings
-                }
+                totalUser,
+                totalStudent,
+                totalTutor,
+                totalTutorReq,
+                totalClasses,
+                ongoingClasses,
+                completedClasses,
+                totalEarning,
+                totalTaxes,
+                totalPayouts,
+                totalCommission,
+                totalDiscount,
+                earnings,
+                sessionOverview
             }
         } catch (error) {
             console.log(error);
