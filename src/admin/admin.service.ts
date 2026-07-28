@@ -5,6 +5,7 @@ import { ClassStatus } from "common/enums/tuition-class.enum";
 import { PrismaService } from "prisma/prisma.service";
 import { AdminAnalyticsDto, TutorAnalyticsDto } from "./dtos/admin.dto";
 import { SessionStatus } from "common/enums/session.enum";
+import { it } from "node:test";
 
 @Injectable({})
 export class AdminService {
@@ -491,8 +492,9 @@ export class AdminService {
             const diffInDays = Math.ceil((toDt.getTime() - fromDt.getTime()) / (1000 * 60 * 60 * 24));
 
             let groupId;
+            console.log(diffInDays);
 
-            if (diffInDays <= 15) {
+            if (diffInDays <= 30) {
                 // Group by day
                 groupId = {
                     $dateToString: {
@@ -531,11 +533,18 @@ export class AdminService {
                 }
             }
 
-            interface SessionOverview {
+            interface sessionOverview {
                 _id: string;
                 count: number;
             }
 
+            interface userOverview {
+                _id: {
+                    date: string,
+                    role: string
+                },
+                count: number,
+            }
             const [
                 totalUser,
                 totalStudent,
@@ -551,6 +560,7 @@ export class AdminService {
                 totalDiscount,
                 earnings,
                 sessionsRaw,
+                usersRaw
             ] = await this.prisma.$transaction([
                 this.prisma.user.count({
                     where: {
@@ -673,7 +683,7 @@ export class AdminService {
                         {
                             $group: {
                                 _id: groupId,
-                                earnings: {
+                                earning: {
                                     $sum: {
                                         $subtract: [
                                             "$commissionAmount",
@@ -717,10 +727,39 @@ export class AdminService {
                             }
                         }
                     ]
+                }),
+                this.prisma.user.aggregateRaw({
+                    pipeline: [
+                        {
+                            $match: {
+                                createdAt: {
+                                    $gte: { $date: fromDt.toISOString() },
+                                    $lte: { $date: toDt.toISOString() }
+                                }
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: {
+                                    date: groupId,
+                                    role: "$role"
+                                },
+                                count: {
+                                    $sum: 1
+                                }
+                            }
+                        },
+                        {
+                            $sort: {
+                                _id: 1
+                            }
+                        }
+                    ]
                 })
             ])
 
-            const sessions = sessionsRaw as unknown as SessionOverview[];
+            const sessions = sessionsRaw as unknown as sessionOverview[];
+            const users = usersRaw as unknown as userOverview[];
 
             const sessionOverview = {
                 REGULAR: 0,
@@ -732,7 +771,33 @@ export class AdminService {
                 sessionOverview[item._id] = item.count;
             }
 
+            let map = {} as any
 
+            for (const item of users) {
+                if (item._id.role !== 'ADMIN') {
+                    const date = item._id.date;
+                    const role = item._id.role;
+
+                    if (!map[date]) {
+                        map[date] = {
+                            date,
+                            Tutor: role === 'TUTOR' ? item.count : 0,
+                            Student: role === 'STUDENT' ? item.count : 0,
+                        }
+                    } else {
+                        if (role === "TUTOR") {
+                            map[date].Tutor += item.count;
+                        }
+
+                        if (role === "STUDENT") {
+                            map[date].Student += item.count;
+                        }
+                    }
+                }
+            }
+
+
+            const netPlatformRevenue = Number(totalCommission._sum.commissionAmount ?? 0) - Number(totalDiscount._sum.discountAmount ?? 0);
 
             return {
                 totalUser,
@@ -742,13 +807,38 @@ export class AdminService {
                 totalClasses,
                 ongoingClasses,
                 completedClasses,
-                totalEarning,
-                totalTaxes,
-                totalPayouts,
-                totalCommission,
-                totalDiscount,
+                totalEarning: totalEarning._sum.totalAmount,
+                totalTaxes: totalTaxes._sum.taxAmount,
+                totalPayouts: totalPayouts._sum.basePrice,
+                totalCommission: totalCommission._sum.commissionAmount,
+                totalDiscount: totalDiscount._sum.discountAmount,
                 earnings,
-                sessionOverview
+                sessionOverview,
+                revenueSummary: [
+                    {
+                        label: "Total Earning",
+                        value: Number(totalEarning._sum.totalAmount ?? 0),
+                    },
+                    {
+                        label: "Tax",
+                        value: Number(totalTaxes._sum.taxAmount ?? 0),
+                    },
+                    {
+                        label: "Payout",
+                        value: Number(totalPayouts._sum.basePrice ?? 0),
+                    },
+                    {
+                        label: "Commission",
+                        value: Number(totalCommission._sum.commissionAmount ?? 0),
+                    },
+                    {
+                        label: "Discount",
+                        value: Number(totalDiscount._sum.discountAmount ?? 0),
+                    },
+                ],
+                netPlatformRevenue,
+
+                userOverview: Object.values(map)
             }
         } catch (error) {
             console.log(error);
