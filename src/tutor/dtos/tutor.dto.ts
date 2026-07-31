@@ -10,8 +10,11 @@ import {
   IsUrl,
   IsEmail,
   IsNotEmpty,
+  IsInt,
+  IsBoolean,
+  IsEnum,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class TutorApplyDto {
   @IsNotEmpty()
@@ -128,4 +131,71 @@ export class TutorProfileUpdateDto {
   )
   @IsString({ each: true })
   levelIds?: string[];
+}
+
+
+export enum TutorSortBy {
+  RECOMMENDED = "RECOMMENDED",
+  HIGHEST_RATED = "HIGHEST_RATED",
+  MOST_STUDENTS = "MOST_STUDENTS",
+  MOST_EXPERIENCED = "MOST_EXPERIENCED",
+  NEWEST = "NEWEST",
+}
+
+
+export class TutorBrowseFilterDto {
+   // Pagination
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number = 10;
+
+  // Search
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  // Subject
+  @IsOptional()
+  @IsMongoId()
+  subjectId?: string;
+
+  // Level
+  @IsOptional()
+  @IsMongoId()
+  levelId?: string;
+
+  // Experience
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  minExperience?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  maxExperience?: number;
+
+  // Rating
+  @IsOptional()
+  @Type(() => Number)
+  minRating?: number;
+
+  // Availability
+  @IsOptional()
+  @IsBoolean()
+  availableNow?: boolean;
+
+  // Sort
+  @IsOptional()
+  @IsEnum(TutorSortBy)
+  sortBy?: TutorSortBy = TutorSortBy.RECOMMENDED;
 }

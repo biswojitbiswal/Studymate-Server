@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Prisma, Roles, SignupIntent, TutorStatus } from "@prisma/client";
 import { PaginationDto } from "src/common/dtos/pagination.dto";
 import { PrismaService } from "src/prisma/prisma.service";
-import { TutorApplyDto, TutorProfileUpdateDto } from "./dtos/tutor.dto";
+import { TutorApplyDto, TutorBrowseFilterDto, TutorProfileUpdateDto, TutorSortBy } from "./dtos/tutor.dto";
 import { CloudinaryService } from "src/cloudinary/cloudinary.service";
 import { title } from "process";
 
@@ -291,6 +291,158 @@ export class TutorService {
                     totalStudents: t.totalStudents,
                 })),
             };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+
+    async browseTutors(dto: TutorBrowseFilterDto) {
+        try {
+            const page = dto.page && dto.page > 0 ? dto.page : 1;
+            const limit = dto.limit && dto.limit > 0 ? dto.limit : 10;
+            const skip = (page - 1) * limit;
+            const search = dto.search?.trim();
+
+            const where: Prisma.TutorWhereInput = {
+                tutorStatus: TutorStatus.APPROVED,
+                user: {
+                    role: Roles.TUTOR,
+                    signupIntent: Roles.TUTOR
+                }
+            }
+
+            if (search) {
+                where.OR = [
+                    {
+                        user: {
+                            name: {
+                                contains: search,
+                                mode: Prisma.QueryMode.insensitive
+                            }
+
+                        }
+                    },
+                    {
+                        title: {
+                            contains: search,
+                            mode: Prisma.QueryMode.insensitive
+                        }
+                    },
+                    {
+                        bio: {
+                            contains: search,
+                            mode: Prisma.QueryMode.insensitive
+                        }
+                    },
+                ]
+            }
+
+            if (dto.subjectId) {
+                where.tutorSubjects = {
+                    some: {
+                        subjectId: dto.subjectId
+                    }
+                }
+            }
+
+            if (dto.levelId) {
+                where.tutorLevels = {
+                    some: {
+                        levelId: dto.levelId
+                    }
+                }
+            }
+
+            if (dto.minExperience || dto.maxExperience) {
+                where.yearsOfExp = {}
+
+                if (dto.minExperience !== undefined) {
+                    where.yearsOfExp.gte = dto.minExperience
+                }
+
+                if (dto.maxExperience !== undefined) {
+                    where.yearsOfExp.lte = dto.maxExperience
+                }
+            }
+
+            if (dto.minRating) {
+                where.rating = {};
+                if (dto.minRating !== undefined) {
+                    where.rating.gte = dto.minRating;
+                }
+            }
+
+            const orderBy: Prisma.TutorOrderByWithRelationInput = {}
+
+            switch (dto.sortBy) {
+                case TutorSortBy.HIGHEST_RATED:
+                    orderBy.rating = 'desc';
+                    break;
+
+                case TutorSortBy.MOST_EXPERIENCED:
+                    orderBy.yearsOfExp = 'desc';
+                    break;
+
+                case TutorSortBy.MOST_STUDENTS:
+                    orderBy.totalStudents = 'desc';
+                    break;
+
+                case TutorSortBy.NEWEST:
+                    orderBy.createdAt = 'desc';
+                    break;
+
+                default:
+                    orderBy.rating = 'desc';
+                    break;
+            }
+
+            const [tutors, totalTutor] = await this.prisma.$transaction([
+                this.prisma.tutor.findMany({
+                    where,
+                    orderBy,
+                    skip,
+                    take: limit,
+                    select: {
+                        id: true,
+                        title: true,
+                        bio: true,
+                        yearsOfExp: true,
+                        rating: true,
+                        totalStudents: true,
+                        qualification: true,
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                avatar: true
+                            }
+                        }
+                    }
+                }),
+                this.prisma.tutor.count({
+                    where
+                })
+            ]);
+
+            return {
+                totalTutor,
+                page,
+                limit,
+                totalPages: Math.ceil(totalTutor / limit),
+                data: tutors.map((t) => ({
+                    id: t.id,
+                    userId: t.user.id,
+                    name: t.user.name,
+                    avatar: t.user.avatar,
+                    title: t.title,
+                    bio: t.bio,
+                    yearsOfExp: t.yearsOfExp,
+                    qualification: t.qualification,
+                    rating: t.rating,
+                    totalStudents: t.totalStudents,
+                })),
+            }
         } catch (error) {
             throw error;
         }
@@ -588,4 +740,74 @@ export class TutorService {
     }
 
 
+    async getByIdBrowse(tutorId: string) {
+        try {
+            const tutor = await this.prisma.tutor.findUnique({
+                where: {
+                    id: tutorId,
+                    tutorStatus: TutorStatus.APPROVED,
+                },
+                select: {
+                    id: true,
+                    title: true,
+                    bio: true,
+                    yearsOfExp: true,
+                    rating: true,
+                    totalStudents: true,
+                    qualification: true,
+                    demoLinks: true,
+                    tutorSubjects: {
+                        select: {
+                            subject: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    slug: true
+                                }
+                            }
+                        }
+                    },
+                    tutorLevels: {
+                        select: {
+                            level: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    slug: true
+                                }
+                            }
+                        }
+                    },
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            avatar: true
+                        }
+                    }
+                }
+            });
+            if (!tutor) {
+                throw new NotFoundException("Tutor not found");
+            }
+
+            return {
+                id: tutor.id,
+                userId: tutor.user.id,
+                name: tutor.user.name,
+                avatar: tutor.user.avatar,
+                title: tutor.title,
+                bio: tutor.bio,
+                yearsOfExp: tutor.yearsOfExp,
+                qualification: tutor.qualification,
+                demoLinks: tutor.demoLinks,
+                subjects: tutor.tutorSubjects.map((s) => s.subject.name),
+                levels: tutor.tutorLevels.map((l) => l.level.name),
+                rating: tutor.rating,
+                totalStudents: tutor.totalStudents,
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
 }

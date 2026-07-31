@@ -6,7 +6,8 @@ import { GetCurrentUserId } from "src/common/decorator/get-current-user-id.decor
 import { Roles } from "src/common/decorator/roles.decorator";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { PaginationDto } from "src/common/dtos/pagination.dto";
-import { TutorApplyDto, TutorProfileUpdateDto } from "./dtos/tutor.dto";
+import { TutorApplyDto, TutorBrowseFilterDto, TutorProfileUpdateDto } from "./dtos/tutor.dto";
+import { Public } from "common/decorator/public.decorator";
 
 @Controller({
     path: "tutor",
@@ -26,6 +27,14 @@ export class TutorController {
         return await this.tutorService.tutorApply(userId, dto, file);
     }
 
+
+    @Public()
+    @Get('browse')
+    async browseTutors(
+        @Query() dto: TutorBrowseFilterDto
+    ) {
+        return await this.tutorService.browseTutors(dto);
+    }
 
 
 
@@ -75,6 +84,13 @@ export class TutorController {
     @Patch('rejected/:id')
     async toggleRejected(@Param('id') id: string) {
         return await this.tutorService.toggleRejected(id)
+    }
+
+
+    @Public()
+    @Get(':id/browse')
+    async getByIdBrowse(@Param('id') id: string) {
+        return await this.tutorService.getByIdBrowse(id)
     }
 
 
