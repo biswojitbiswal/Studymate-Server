@@ -897,6 +897,8 @@ model Review {
   klass         TuitionClass  @relation(fields: [klassId], references: [id])
 
   createdAt     DateTime      @default(now())
+
+  @@index([tutorId, status])
 }
 
 

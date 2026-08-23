@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma, Roles, SignupIntent, TutorStatus } from "@prisma/client";
+import { Prisma, Roles, SignupIntent, Status, TutorStatus } from "@prisma/client";
 import { PaginationDto } from "src/common/dtos/pagination.dto";
 import { PrismaService } from "src/prisma/prisma.service";
 import { TutorApplyDto, TutorBrowseFilterDto, TutorProfileUpdateDto, TutorSortBy } from "./dtos/tutor.dto";
@@ -406,14 +406,15 @@ export class TutorService {
                     select: {
                         id: true,
                         title: true,
-                        bio: true,
                         yearsOfExp: true,
-                        rating: true,
                         totalStudents: true,
-                        qualification: true,
+                        tutorSubjects: {
+                            select: {
+                                subject: { select: { name: true } }
+                            }
+                        },
                         user: {
                             select: {
-                                id: true,
                                 name: true,
                                 avatar: true
                             }
@@ -425,23 +426,44 @@ export class TutorService {
                 })
             ]);
 
+            // Fetch review statistics for the whole page in one aggregate query.
+            // Only approved public reviews contribute to the displayed rating/count.
+            const tutorIds = tutors.map((t) => t.id);
+            const reviewStats = tutorIds.length > 0
+                ? await this.prisma.review.groupBy({
+                    by: ['tutorId'],
+                    where: {
+                        tutorId: { in: tutorIds },
+                        status: Status.ACTIVE,
+                    },
+                    _avg: { rating: true },
+                    _count: { _all: true },
+                })
+                : [];
+            const reviewStatsByTutor = new Map(
+                reviewStats.map((stat) => [stat.tutorId, stat])
+            );
+
             return {
                 totalTutor,
                 page,
                 limit,
                 totalPages: Math.ceil(totalTutor / limit),
-                data: tutors.map((t) => ({
-                    id: t.id,
-                    userId: t.user.id,
-                    name: t.user.name,
-                    avatar: t.user.avatar,
-                    title: t.title,
-                    bio: t.bio,
-                    yearsOfExp: t.yearsOfExp,
-                    qualification: t.qualification,
-                    rating: t.rating,
-                    totalStudents: t.totalStudents,
-                })),
+                data: tutors.map((t) => {
+                    const stats = reviewStatsByTutor.get(t.id);
+
+                    return {
+                        id: t.id,
+                        name: t.user.name,
+                        avatar: t.user.avatar,
+                        title: t.title,
+                        yearsOfExp: t.yearsOfExp,
+                        subjects: t.tutorSubjects.map((s) => s.subject.name),
+                        rating: Number((stats?._avg.rating ?? 0).toFixed(1)),
+                        totalReviews: stats?._count._all ?? 0,
+                        totalStudents: t.totalStudents,
+                    };
+                }),
             }
         } catch (error) {
             throw error;
@@ -742,68 +764,62 @@ export class TutorService {
 
     async getByIdBrowse(tutorId: string) {
         try {
-            const tutor = await this.prisma.tutor.findUnique({
-                where: {
-                    id: tutorId,
-                    tutorStatus: TutorStatus.APPROVED,
-                },
-                select: {
-                    id: true,
-                    title: true,
-                    bio: true,
-                    yearsOfExp: true,
-                    rating: true,
-                    totalStudents: true,
-                    qualification: true,
-                    demoLinks: true,
-                    tutorSubjects: {
-                        select: {
-                            subject: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    slug: true
-                                }
-                            }
-                        }
+            const [tutor, reviewStats] = await this.prisma.$transaction([
+                this.prisma.tutor.findUnique({
+                    where: {
+                        id: tutorId,
+                        tutorStatus: TutorStatus.APPROVED,
                     },
-                    tutorLevels: {
-                        select: {
-                            level: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    slug: true
-                                }
+                    select: {
+                        id: true,
+                        title: true,
+                        bio: true,
+                        yearsOfExp: true,
+                        totalStudents: true,
+                        demoLinks: true,
+                        tutorSubjects: {
+                            select: {
+                                subject: { select: { name: true } }
                             }
-                        }
-                    },
-                    user: {
-                        select: {
-                            id: true,
-                            name: true,
-                            avatar: true
+                        },
+                        tutorLevels: {
+                            select: {
+                                level: { select: { name: true } }
+                            }
+                        },
+                        user: {
+                            select: {
+                                name: true,
+                                avatar: true
+                            }
                         }
                     }
-                }
-            });
+                }),
+                this.prisma.review.aggregate({
+                    where: {
+                        tutorId,
+                        status: Status.ACTIVE,
+                    },
+                    _avg: { rating: true },
+                    _count: { _all: true },
+                })
+            ]);
             if (!tutor) {
                 throw new NotFoundException("Tutor not found");
             }
 
             return {
                 id: tutor.id,
-                userId: tutor.user.id,
                 name: tutor.user.name,
                 avatar: tutor.user.avatar,
                 title: tutor.title,
                 bio: tutor.bio,
                 yearsOfExp: tutor.yearsOfExp,
-                qualification: tutor.qualification,
                 demoLinks: tutor.demoLinks,
                 subjects: tutor.tutorSubjects.map((s) => s.subject.name),
                 levels: tutor.tutorLevels.map((l) => l.level.name),
-                rating: tutor.rating,
+                rating: Number((reviewStats._avg.rating ?? 0).toFixed(1)),
+                totalReviews: reviewStats._count._all,
                 totalStudents: tutor.totalStudents,
             };
         } catch (error) {
