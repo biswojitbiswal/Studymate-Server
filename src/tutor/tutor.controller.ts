@@ -88,9 +88,9 @@ export class TutorController {
 
 
     @Public()
-    @Get(':id/browse')
-    async getByIdBrowse(@Param('id') id: string) {
-        return await this.tutorService.getByIdBrowse(id)
+    @Get(':slug/browse')
+    async getBySlugBrowse(@Param('slug') slug: string) {
+        return await this.tutorService.getBySlugBrowse(slug)
     }
 
 

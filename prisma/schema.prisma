@@ -114,6 +114,8 @@ model Tutor{
   user                    User                      @relation(fields: [userId], references: [id])
   userId                  String                    @unique @db.ObjectId
 
+  slug                    String                    @unique
+
   title                   String?
   yearsOfExp              Float?
   bio                     String?

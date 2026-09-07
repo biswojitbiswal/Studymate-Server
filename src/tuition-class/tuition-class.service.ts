@@ -1,24 +1,34 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UploadedFiles } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
 import { AdminTuitionClassFilter, BrowseClassFilterDto, CreateTuitionClassDto, TutorTuitionClassFilter, TutorUpdateTuitionClassDto } from "./dtos/tuition-class.dto";
-import { NOTFOUND } from "dns";
 import { CloudinaryService } from "src/cloudinary/cloudinary.service";
 import { ClassStatus, ClassType } from "src/common/enums/tuition-class.enum";
 import { slugify } from "src/common/utils/slugify.util";
 import { Prisma, TuitionClass } from "@prisma/client";
-import items from "razorpay/dist/types/items";
-import { ENTRY_PROVIDER_WATERMARK } from "@nestjs/common/constants";
 import { NotificationGateway } from "notification/notification.gateway";
 
 @Injectable({})
 export class TuitionClassService {
     constructor(
-        private readonly prisma: PrismaService, 
+        private readonly prisma: PrismaService,
         private readonly cloudinary: CloudinaryService,
         private readonly notification: NotificationGateway,
     ) { }
 
-    // TODO: We should check the overlap existing session timing when we create any class(optional)
+    async generateUniqueClassSlug(title: string) {
+        const baseSlug = slugify(title);
+
+        let slug = baseSlug;
+        let counter = 1;
+
+        while (await this.prisma.tuitionClass.findUnique({ where: { seo_name: slug } })) {
+            slug = `${baseSlug}-${counter}`;
+            counter++;
+        }
+
+        return slug;
+    }
+
     async create(dto: CreateTuitionClassDto, userId: string, files: {
         previewImg?: Express.Multer.File[];
         previewVdo?: Express.Multer.File[];
@@ -119,11 +129,13 @@ export class TuitionClassService {
                 currency = null;
             }
 
+            const slug = await this.generateUniqueClassSlug(dto.title) as any;
+
             const { startDate, endDate, joiningStartDate, joiningEndDate, ...restDto } = dto
             const klass = await this.prisma.tuitionClass.create({
                 data: {
                     tutorId: tutor.id,
-                    seo_name: slugify(dto.title),
+                    seo_name: slug,
                     previewImg,
                     previewVdo,
                     startDate: new Date(startDate),
@@ -769,7 +781,7 @@ export class TuitionClassService {
                 };
             }
 
-            
+
 
             /* ---------- Query ---------- */
             const [data, total] = await Promise.all([
@@ -823,7 +835,7 @@ export class TuitionClassService {
                 this.prisma.tuitionClass.count({ where }),
             ]);
 
-            
+
             let wishlistSet = new Set();
 
             if (userId) {
@@ -960,7 +972,7 @@ export class TuitionClassService {
                         student: {
                             userId
                         },
-                        enrolledAt: {lt: new Date()}
+                        enrolledAt: { lt: new Date() }
                     },
                     select: { id: true }
                 });

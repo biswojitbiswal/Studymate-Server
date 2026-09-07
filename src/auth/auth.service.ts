@@ -27,6 +27,7 @@ export class AuthService {
         // Point this endpoint to your controller that verifies the token
         return `${base}/verify-email/${encodeURIComponent(token)}`;
     }
+    
 
     async signup(dto: SignupDto) {
         const { name, email, phone, password, signupIntent, provider } = dto;

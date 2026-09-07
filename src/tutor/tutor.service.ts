@@ -5,6 +5,7 @@ import { PrismaService } from "src/prisma/prisma.service";
 import { TutorApplyDto, TutorBrowseFilterDto, TutorProfileUpdateDto, TutorSortBy } from "./dtos/tutor.dto";
 import { CloudinaryService } from "src/cloudinary/cloudinary.service";
 import { title } from "process";
+import { slugify } from "common/utils/slugify.util";
 
 
 function isTutorProfileCompleted(tutor: {
@@ -41,6 +42,20 @@ export class TutorService {
     ) { }
 
 
+    async generateUniqueTutorSlug(tx: Prisma.TransactionClient, name: string) {
+        const baseSlug = slugify(name);
+
+        let slug = baseSlug;
+        let counter = 1;
+
+        while (await tx.tutor.findUnique({ where: { slug } })) {
+            slug = `${baseSlug}-${counter}`;
+            counter++;
+        }
+
+        return slug;
+    }
+
     async tutorApply(
         userId: string,
         dto: TutorApplyDto,
@@ -62,14 +77,12 @@ export class TutorService {
             },
         });
 
-        // ❌ Approved tutors cannot edit
         if (existingTutor?.tutorStatus === "APPROVED") {
             throw new BadRequestException(
                 "Approved tutors cannot modify their application",
             );
         }
 
-        /* ---------------- AVATAR ---------------- */
         let avatar: string | undefined;
 
         if (file) {
@@ -84,16 +97,22 @@ export class TutorService {
             avatar = upload.url;
         }
 
-        /* ---------------- TRANSACTION ---------------- */
+
         await this.prisma.$transaction(async (tx) => {
             let tutorId: string;
 
             // ✅ CREATE
             if (!existingTutor) {
+                const slug = await this.generateUniqueTutorSlug(
+                    tx,
+                    user.name || dto.title,
+                );
+
                 const tutor = await tx.tutor.create({
                     data: {
                         userId,
                         title: dto.title,
+                        slug,
                         yearsOfExp: dto.yearsOfExp,
                         bio: dto.bio,
                         qualification: dto.qualification ?? [],
@@ -405,6 +424,7 @@ export class TutorService {
                     take: limit,
                     select: {
                         id: true,
+                        slug: true,
                         title: true,
                         yearsOfExp: true,
                         totalStudents: true,
@@ -457,6 +477,7 @@ export class TutorService {
                         name: t.user.name,
                         avatar: t.user.avatar,
                         title: t.title,
+                        slug: t.slug,
                         yearsOfExp: t.yearsOfExp,
                         subjects: t.tutorSubjects.map((s) => s.subject.name),
                         rating: Number((stats?._avg.rating ?? 0).toFixed(1)),
@@ -762,68 +783,88 @@ export class TutorService {
     }
 
 
-    async getByIdBrowse(tutorId: string) {
-        try {
-            const [tutor, reviewStats] = await this.prisma.$transaction([
-                this.prisma.tutor.findUnique({
-                    where: {
-                        id: tutorId,
-                        tutorStatus: TutorStatus.APPROVED,
-                    },
+    async getBySlugBrowse(slug: string) {
+        const tutor = await this.prisma.tutor.findUnique({
+            where: {
+                slug,
+            },
+            select: {
+                id: true,
+                slug: true,
+                title: true,
+                bio: true,
+                yearsOfExp: true,
+                totalStudents: true,
+                demoLinks: true,
+
+                tutorStatus: true,
+
+                tutorSubjects: {
                     select: {
-                        id: true,
-                        title: true,
-                        bio: true,
-                        yearsOfExp: true,
-                        totalStudents: true,
-                        demoLinks: true,
-                        tutorSubjects: {
-                            select: {
-                                subject: { select: { name: true } }
-                            }
-                        },
-                        tutorLevels: {
-                            select: {
-                                level: { select: { name: true } }
-                            }
-                        },
-                        user: {
+                        subject: {
                             select: {
                                 name: true,
-                                avatar: true
-                            }
-                        }
-                    }
-                }),
-                this.prisma.review.aggregate({
-                    where: {
-                        tutorId,
-                        status: Status.ACTIVE,
+                            },
+                        },
                     },
-                    _avg: { rating: true },
-                    _count: { _all: true },
-                })
-            ]);
-            if (!tutor) {
-                throw new NotFoundException("Tutor not found");
-            }
+                },
 
-            return {
-                id: tutor.id,
-                name: tutor.user.name,
-                avatar: tutor.user.avatar,
-                title: tutor.title,
-                bio: tutor.bio,
-                yearsOfExp: tutor.yearsOfExp,
-                demoLinks: tutor.demoLinks,
-                subjects: tutor.tutorSubjects.map((s) => s.subject.name),
-                levels: tutor.tutorLevels.map((l) => l.level.name),
-                rating: Number((reviewStats._avg.rating ?? 0).toFixed(1)),
-                totalReviews: reviewStats._count._all,
-                totalStudents: tutor.totalStudents,
-            };
-        } catch (error) {
-            throw error;
+                tutorLevels: {
+                    select: {
+                        level: {
+                            select: {
+                                name: true,
+                            },
+                        },
+                    },
+                },
+
+                user: {
+                    select: {
+                        name: true,
+                        avatar: true,
+                    },
+                },
+            },
+        });
+
+        if (!tutor || tutor.tutorStatus !== TutorStatus.APPROVED) {
+            throw new NotFoundException("Tutor not found");
         }
+
+        const reviewStats = await this.prisma.review.aggregate({
+            where: {
+                tutorId: tutor.id,
+                status: Status.ACTIVE,
+            },
+            _avg: {
+                rating: true,
+            },
+            _count: {
+                _all: true,
+            },
+        });
+
+        return {
+            id: tutor.id,
+            slug: tutor.slug,
+            name: tutor.user.name,
+            avatar: tutor.user.avatar,
+            title: tutor.title,
+            bio: tutor.bio,
+            yearsOfExp: tutor.yearsOfExp,
+            demoLinks: tutor.demoLinks,
+            subjects: tutor.tutorSubjects.map(
+                (s) => s.subject.name
+            ),
+            levels: tutor.tutorLevels.map(
+                (l) => l.level.name
+            ),
+            rating: Number(
+                (reviewStats._avg.rating ?? 0).toFixed(1)
+            ),
+            totalReviews: reviewStats._count._all,
+            totalStudents: tutor.totalStudents,
+        };
     }
 }
