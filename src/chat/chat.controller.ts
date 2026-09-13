@@ -82,8 +82,8 @@ export class ChatController {
 
 
     @UseGuards(AuthGuard)
-    @Post("conversations/:id/toggle-mute")
-    toggleMute(@Param("id") id: string, @GetCurrentUserId() userId: string) {
-        return this.chat.toggleMute(id, userId);
+    @Post("conversations/:id/read")
+    markRead(@Param("id") id: string, @GetCurrentUserId() userId: string) {
+        return this.chat.markConversationRead(id, userId);
     }
 }

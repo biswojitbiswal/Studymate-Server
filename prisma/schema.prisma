@@ -59,7 +59,6 @@ model User {
   conversationsCreated    Conversation[]
   conversationParticipants ConversationParticipants[]
   messages                Message[]
-  messageReceipts         MessageReceipt[]
   hiddenMessages          MessageHidden[]
 
   orders                  Order[]
@@ -1015,11 +1014,9 @@ model ConversationParticipants{
   userId                String          @db.ObjectId
   user                  User            @relation(fields: [userId], references: [id])
 
-  lastSeenMessageId     String?
+  lastSeenMessageId     String?          @db.ObjectId
 
   joinedAt              DateTime        @default(now())
-
-  isMuted               Boolean         @default(false)
 
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
@@ -1057,29 +1054,14 @@ model Message{
 
   isDeleted             Boolean         @default(false)
 
-  receipts              MessageReceipt[]
   hiddenBy              MessageHidden[]
 
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 
-  @@index([conversationId])
+  @@index([conversationId, createdAt])
+  @@index([senderId, createdAt])
   @@index([content])
-}
-
-
-model MessageReceipt {
-  id                String        @id @default(auto()) @map("_id") @db.ObjectId
-
-  messageId         String        @db.ObjectId
-  message           Message       @relation(fields: [messageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  userId            String        @db.ObjectId
-  user              User          @relation(fields: [userId], references: [id])
-
-  seenAt            DateTime?
-
-  @@unique([messageId, userId])
 }
 
 
@@ -1095,6 +1077,7 @@ model MessageHidden {
   createdAt         DateTime             @default(now())
 
   @@unique([userId, messageId])
+  @@index([messageId])
 }
 
 

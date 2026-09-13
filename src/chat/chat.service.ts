@@ -1,10 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "prisma/prisma.service";
 import { CreateDMDto, CreateGroupDto, CreateMessageDto, GetMessagesDto } from "./dtos/chat.dto";
-import { user } from "@getbrevo/brevo/dist/cjs/api";
 import { WebsocketGateway } from "websocket/websocket.gateway";
-import { log } from "console";
-import { Prisma } from "@prisma/client";
 
 @Injectable({})
 export class ChatService {
@@ -206,7 +203,12 @@ export class ChatService {
 
     async createMessage(dto: CreateMessageDto, userId: string) {
         try {
-            const { conversationId, content, replyToId } = dto;
+            const { conversationId, replyToId } = dto;
+            const content = dto.content.trim();
+
+            if (!content) {
+                throw new BadRequestException("Message cannot be empty");
+            }
 
             const conversation = await this.prisma.conversation.findUnique({
                 where: { id: conversationId },
@@ -224,7 +226,7 @@ export class ChatService {
             );
 
             if (!isParticipant) {
-                throw new BadRequestException("You are not part of this conversation");
+                throw new ForbiddenException("You are not part of this conversation");
             }
 
             const setting = await this.prisma.conversationSetting.findUnique({
@@ -242,13 +244,49 @@ export class ChatService {
             }
 
             if (replyToId) {
-                const replyMsg = await this.prisma.message.findUnique({
-                    where: { id: replyToId },
+                const replyMsg = await this.prisma.message.findFirst({
+                    where: {
+                        id: replyToId,
+                        conversationId,
+                        isDeleted: false,
+                        hiddenBy: { none: { userId } },
+                    },
                 });
 
-                if (!replyMsg || replyMsg.conversationId !== conversationId) {
+                if (!replyMsg) {
                     throw new BadRequestException("Invalid reply message");
                 }
+            }
+
+            const recentMessageCount = await this.prisma.message.count({
+                where: {
+                    senderId: userId,
+                    createdAt: { gte: new Date(Date.now() - 10_000) },
+                },
+            });
+
+            if (recentMessageCount >= 8) {
+                throw new HttpException(
+                    "You are sending messages too quickly. Please wait a moment.",
+                    HttpStatus.TOO_MANY_REQUESTS,
+                );
+            }
+
+            const duplicate = await this.prisma.message.findFirst({
+                where: {
+                    conversationId,
+                    senderId: userId,
+                    content,
+                    createdAt: { gte: new Date(Date.now() - 1_500) },
+                },
+                select: { id: true },
+            });
+
+            if (duplicate) {
+                throw new HttpException(
+                    "Duplicate message blocked.",
+                    HttpStatus.TOO_MANY_REQUESTS,
+                );
             }
 
             const message = await this.prisma.message.create({
@@ -269,23 +307,7 @@ export class ChatService {
                 data: { lastMessageId: message.id },
             });
 
-            if (conversation.type === "DM") {
-                const otherUser = conversation.participants.find(
-                    (p) => p.userId !== userId
-                );
-
-                if (otherUser) {
-                    await this.prisma.messageReceipt.create({
-                        data: {
-                            messageId: message.id,
-                            userId: otherUser.userId,
-                            seenAt: null
-                        },
-                    });
-                }
-            }
-
-            this.websocket.sendToConversation(conversationId, {
+            await this.websocket.sendToConversation(conversationId, {
                 type: "NEW_MESSAGE",
                 data: message,
             });
@@ -329,6 +351,7 @@ export class ChatService {
                     messages: {
                         where: {
                             isDeleted: false,
+                            hiddenBy: { none: { userId } },
                         },
                         orderBy: {
                             createdAt: "desc",
@@ -382,6 +405,7 @@ export class ChatService {
                                     not: userId,
                                 },
                                 isDeleted: false,
+                                hiddenBy: { none: { userId } },
                             },
                         });
                     } else {
@@ -392,6 +416,7 @@ export class ChatService {
                                     not: userId,
                                 },
                                 isDeleted: false,
+                                hiddenBy: { none: { userId } },
                             },
                         });
                     }
@@ -406,7 +431,6 @@ export class ChatService {
                         lastMessage,
                         updatedAt: conv.updatedAt,
                         unreadCount,
-                        isMuted: myParticipant?.isMuted || false,
                     };
                 })
             );
@@ -422,13 +446,25 @@ export class ChatService {
         try {
             const { conversationId, cursor, limit = "20" } = dto;
 
-            const take = parseInt(limit);
+            const parsedLimit = Number.parseInt(limit, 10);
+            const take = Number.isFinite(parsedLimit)
+                ? Math.min(Math.max(parsedLimit, 1), 50)
+                : 20;
 
             const conversation = await this.prisma.conversation.findUnique({
                 where: { id: conversationId },
                 select: {
                     id: true,
                     type: true,
+                    pinnedMessageId: true,
+                    pinnedMessage: {
+                        select: {
+                            id: true,
+                            content: true,
+                            isDeleted: true,
+                            sender: { select: { name: true } },
+                        },
+                    },
                     klass: {
                         select: {
                             id: true,
@@ -440,7 +476,6 @@ export class ChatService {
                         select: {
                             lastSeenMessageId: true,
                             userId: true,
-                            isMuted: true,
                             user: {
                                 select: {
                                     id: true,
@@ -463,6 +498,13 @@ export class ChatService {
                 (p) => p.userId === userId
             );
 
+            const lastReadMessage = currentParticipant?.lastSeenMessageId
+                ? await this.prisma.message.findUnique({
+                    where: { id: currentParticipant.lastSeenMessageId },
+                    select: { createdAt: true },
+                })
+                : null;
+
             const isParticipant = conversation.participants.some(
                 (p) => p.userId === userId
             );
@@ -470,44 +512,20 @@ export class ChatService {
             
 
             if (!isParticipant) {
-                throw new BadRequestException("Not allowed");
+                throw new ForbiddenException("Not allowed");
             }
 
             const hidden = await this.prisma.messageHidden.findMany({
-                where: { userId },
+                where: {
+                    userId,
+                    message: { conversationId },
+                },
                 select: { messageId: true },
             });
 
             const hiddenIds = hidden.map((h) => h.messageId);
 
-            let cursorObj: { id: string } | undefined;
-
-            const queryOptions: any = {};
-
-            if (cursorObj) {
-                queryOptions.cursor = cursorObj;
-                queryOptions.skip = 1;
-            }
-
-            // ✅ TYPE SAFE MESSAGE WITH RECEIPTS
-            type MessageWithReceipts = Prisma.MessageGetPayload<{
-                include: {
-                    sender: {
-                        select: {
-                            id: true;
-                            avatar: true;
-                            name: true;
-                        };
-                    };
-                    replyTo: true;
-                    receipts: {
-                        select: {
-                            userId: true;
-                            seenAt: true;
-                        };
-                    };
-                };
-            }>;
+            const cursorObj = cursor ? { id: cursor } : undefined;
 
             const messages = await this.prisma.message.findMany({
                 where: {
@@ -516,11 +534,10 @@ export class ChatService {
                         notIn: hiddenIds,
                     },
                 },
-                orderBy: {
-                    createdAt: "desc",
-                },
-                take: take,
-                ...queryOptions,
+                orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+                take: take + 1,
+                cursor: cursorObj,
+                skip: cursorObj ? 1 : 0,
                 include: {
                     sender: {
                         select: {
@@ -530,56 +547,40 @@ export class ChatService {
                         },
                     },
                     replyTo: true,
-                    receipts: {
-                        select: {
-                            userId: true,
-                            seenAt: true,
-                        },
-                    },
                 },
             });
 
-            const orderedMessages = messages.reverse();
+            const hasMore = messages.length > take;
+            const pageMessages = hasMore ? messages.slice(0, take) : messages;
+            const nextCursor = hasMore
+                ? pageMessages[pageMessages.length - 1]?.id
+                : null;
 
-
-            // GROUP
-            const lastMessage = orderedMessages[orderedMessages.length - 1];
-
-            if (lastMessage) {
-                await this.prisma.conversationParticipants.updateMany({
-                    where: {
-                        conversationId,
-                        userId,
-                    },
-                    data: {
-                        lastSeenMessageId: lastMessage.id,
-                    },
-                });
-            }
-
-            // ✅ FORMAT FOR FRONTEND (IMPORTANT)
-            const formattedMessages = orderedMessages.map((msg) => {
-                const m = msg as typeof msg & {
-                    receipts: { userId: string; seenAt: Date | null }[];
-                };
-
-                const otherReceipt = m.receipts.find(
-                    (r) => r.userId !== userId
-                );
-
-                return {
-                    ...msg,
-                    seenAt: otherReceipt?.seenAt || null,
-                };
-            });
+            const formattedMessages = pageMessages.reverse().map((msg) => ({
+                ...msg,
+                replyTo: msg.replyTo && hiddenIds.includes(msg.replyTo.id)
+                    ? null
+                    : msg.replyTo,
+            }));
 
             // 🧠 7. Return response
             return {
                 conversation: {
                     id: conversation.id,
                     type: conversation.type,
+                    pinnedMessageId:
+                        conversation.pinnedMessageId &&
+                        !hiddenIds.includes(conversation.pinnedMessageId)
+                            ? conversation.pinnedMessageId
+                            : null,
+                    pinnedMessage:
+                        conversation.pinnedMessageId &&
+                        !hiddenIds.includes(conversation.pinnedMessageId)
+                            ? conversation.pinnedMessage
+                            : null,
 
                     lastSeenMessageId: currentParticipant?.lastSeenMessageId || null,
+                    lastReadAt: lastReadMessage?.createdAt || null,
 
                     // 🔥 computed (for UI)
                     displayName: conversation.type === "GROUP"
@@ -598,10 +599,9 @@ export class ChatService {
                         }
                         : null,
 
-                    isMuted: currentParticipant?.isMuted || false,
                 },
                 messages: formattedMessages,
-                nextCursor: messages.length === take ? messages[0].id : null,
+                nextCursor,
             };
         } catch (error) {
             throw error;
@@ -622,7 +622,7 @@ export class ChatService {
             where: { conversationId: msg.conversationId, userId },
         });
         if (!isParticipant) {
-            throw new BadRequestException("Not part of this conversation");
+            throw new ForbiddenException("Not part of this conversation");
         }
 
         // idempotent insert (avoid duplicates)
@@ -632,6 +632,11 @@ export class ChatService {
             },
             update: {},
             create: { userId, messageId },
+        });
+
+        this.websocket.server.to(userId).emit("message_hidden", {
+            messageId,
+            conversationId: msg.conversationId,
         });
 
         return { messageId, conversationId: msg.conversationId };
@@ -646,6 +651,12 @@ export class ChatService {
                 senderId: true,
                 conversationId: true,
                 isDeleted: true,
+                conversation: {
+                    select: {
+                        lastMessageId: true,
+                        pinnedMessageId: true,
+                    },
+                },
             },
         });
 
@@ -655,7 +666,7 @@ export class ChatService {
 
         // ❗ Only sender can delete
         if (message.senderId !== userId) {
-            throw new BadRequestException("Not allowed");
+            throw new ForbiddenException("Not allowed");
         }
 
         // ✅ Already deleted → do nothing
@@ -675,7 +686,7 @@ export class ChatService {
         });
 
         if (!isParticipant) {
-            throw new BadRequestException("Not part of this conversation");
+            throw new ForbiddenException("Not part of this conversation");
         }
 
         // 🔥 Update message
@@ -686,6 +697,29 @@ export class ChatService {
                 // deletedAt: new Date(),
                 content: "This message was deleted",
                 replyToId: null, // ✅ prevent broken reply chain
+            },
+        });
+
+        const replacementLastMessage = message.conversation.lastMessageId === messageId
+            ? await this.prisma.message.findFirst({
+                where: {
+                    conversationId: message.conversationId,
+                    isDeleted: false,
+                },
+                orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+                select: { id: true },
+            })
+            : null;
+
+        await this.prisma.conversation.update({
+            where: { id: message.conversationId },
+            data: {
+                lastMessageId: message.conversation.lastMessageId === messageId
+                    ? replacementLastMessage?.id || null
+                    : message.conversation.lastMessageId,
+                pinnedMessageId: message.conversation.pinnedMessageId === messageId
+                    ? null
+                    : message.conversation.pinnedMessageId,
             },
         });
 
@@ -731,7 +765,7 @@ export class ChatService {
         });
 
         if (!participant) {
-            throw new BadRequestException("Not part of conversation");
+            throw new ForbiddenException("Not part of conversation");
         }
 
         // 🔥 set pinned message
@@ -768,7 +802,7 @@ export class ChatService {
         });
 
         if (!participant) {
-            throw new BadRequestException("Not part of conversation");
+            throw new ForbiddenException("Not part of conversation");
         }
 
         await this.prisma.conversation.update({
@@ -821,7 +855,7 @@ export class ChatService {
         });
 
         if (!participant) {
-            throw new BadRequestException("Not part of conversation");
+            throw new ForbiddenException("Not part of conversation");
         }
 
         // 🔥 get current pinned
@@ -873,7 +907,7 @@ export class ChatService {
 
 
 
-    async toggleMute(conversationId: string, userId: string) {
+    async markConversationRead(conversationId: string, userId: string) {
         const participant = await this.prisma.conversationParticipants.findUnique({
             where: {
                 conversationId_userId: {
@@ -881,16 +915,20 @@ export class ChatService {
                     userId,
                 },
             },
-            select: {
-                isMuted: true,
-            },
+            select: { id: true },
         });
 
         if (!participant) {
-            throw new BadRequestException("Not part of conversation");
+            throw new ForbiddenException("Not part of conversation");
         }
 
-        const updated = await this.prisma.conversationParticipants.update({
+        const latestMessage = await this.prisma.message.findFirst({
+            where: { conversationId },
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+            select: { id: true },
+        });
+
+        await this.prisma.conversationParticipants.update({
             where: {
                 conversationId_userId: {
                     conversationId,
@@ -898,13 +936,13 @@ export class ChatService {
                 },
             },
             data: {
-                isMuted: !participant.isMuted,
+                lastSeenMessageId: latestMessage?.id || null,
             },
         });
 
         return {
             conversationId,
-            isMuted: updated.isMuted,
+            lastSeenMessageId: latestMessage?.id || null,
         };
     }
 }
