@@ -803,6 +803,7 @@ export class TutorService {
                     select: {
                         subject: {
                             select: {
+                                id: true,
                                 name: true,
                             },
                         },
@@ -813,6 +814,7 @@ export class TutorService {
                     select: {
                         level: {
                             select: {
+                                id: true,
                                 name: true,
                             },
                         },
@@ -857,8 +859,14 @@ export class TutorService {
             subjects: tutor.tutorSubjects.map(
                 (s) => s.subject.name
             ),
+            subjectIds: tutor.tutorSubjects.map(
+                (s) => s.subject.id
+            ),
             levels: tutor.tutorLevels.map(
                 (l) => l.level.name
+            ),
+            levelIds: tutor.tutorLevels.map(
+                (l) => l.level.id
             ),
             rating: Number(
                 (reviewStats._avg.rating ?? 0).toFixed(1)

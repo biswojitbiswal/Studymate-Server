@@ -400,6 +400,14 @@ export class AdminUpdateTuitionClassDto {
 
 export class BrowseClassFilterDto {
     @IsOptional()
+    @IsMongoId()
+    tutorId?: string;
+
+    @IsOptional()
+    @IsString()
+    tutorSlug?: string;
+
+    @IsOptional()
     @IsArray()
     @IsMongoId({ each: true })
     @Transform(({ value }) =>

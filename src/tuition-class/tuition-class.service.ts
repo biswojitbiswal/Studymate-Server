@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException,
 import { PrismaService } from "src/prisma/prisma.service";
 import { AdminTuitionClassFilter, BrowseClassFilterDto, CreateTuitionClassDto, TutorTuitionClassFilter, TutorUpdateTuitionClassDto } from "./dtos/tuition-class.dto";
 import { CloudinaryService } from "src/cloudinary/cloudinary.service";
-import { ClassStatus, ClassType } from "src/common/enums/tuition-class.enum";
+import { ClassStatus, ClassType, Status } from "src/common/enums/tuition-class.enum";
 import { slugify } from "src/common/utils/slugify.util";
 import { Prisma, TuitionClass } from "@prisma/client";
 import { NotificationGateway } from "notification/notification.gateway";
@@ -732,6 +732,14 @@ export class TuitionClassService {
                 status: 'PUBLISHED',
             };
 
+            if (dto.tutorId) {
+                where.tutorId = dto.tutorId;
+            }
+
+            if (dto.tutorSlug) {
+                where.tutor = { slug: dto.tutorSlug };
+            }
+
             if (dto.type) {
                 where.type = dto.type;
             }
@@ -805,6 +813,7 @@ export class TuitionClassService {
                         tutor: {
                             select: {
                                 id: true,
+                                slug: true,
                                 rating: true,
                                 totalStudents: true,
                                 yearsOfExp: true,
@@ -908,6 +917,7 @@ export class TuitionClassService {
                     tutor: {
                         select: {
                             id: true,
+                            slug: true,
                             rating: true,
                             totalStudents: true,
                             yearsOfExp: true,
@@ -949,41 +959,44 @@ export class TuitionClassService {
 
             if (!klass) throw new NotFoundException("Class not found")
 
-            let isWishlisted = false;
-
-            if (userId) {
-                const wishlist = await this.prisma.wishlist.findUnique({
-                    where: {
-                        userId_productId: {
-                            userId,
-                            productId: klass.id
-                        }
-                    }
-                });
-
-                isWishlisted = !!wishlist;
-            }
-
-            let isPurchased = false;
-            if (userId) {
-                const enrollment = await this.prisma.classEnrollment.findFirst({
-                    where: {
-                        classId: klass.id,
-                        student: {
-                            userId
+            const [wishlist, enrollment, reviewStats] = await Promise.all([
+                userId
+                    ? this.prisma.wishlist.findUnique({
+                        where: {
+                            userId_productId: {
+                                userId,
+                                productId: klass.id
+                            }
                         },
-                        enrolledAt: { lt: new Date() }
+                        select: { id: true }
+                    })
+                    : null,
+                userId
+                    ? this.prisma.classEnrollment.findFirst({
+                        where: {
+                            classId: klass.id,
+                            student: { userId },
+                            enrolledAt: { lt: new Date() }
+                        },
+                        select: { id: true }
+                    })
+                    : null,
+                this.prisma.review.aggregate({
+                    where: {
+                        klassId: klass.id,
+                        status: Status.ACTIVE,
                     },
-                    select: { id: true }
-                });
-
-                isPurchased = !!enrollment;
-            }
+                    _avg: { rating: true },
+                    _count: { _all: true },
+                }),
+            ]);
 
             return {
                 ...klass,
-                isWishlisted,
-                isPurchased,
+                isWishlisted: !!wishlist,
+                isPurchased: !!enrollment,
+                rating: Number((reviewStats._avg.rating ?? 0).toFixed(1)),
+                totalReviews: reviewStats._count._all,
             };
         } catch (error) {
             throw error;

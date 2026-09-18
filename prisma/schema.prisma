@@ -900,6 +900,7 @@ model Review {
   createdAt     DateTime      @default(now())
 
   @@index([tutorId, status])
+  @@index([klassId, status])
 }
 
 
