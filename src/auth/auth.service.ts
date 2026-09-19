@@ -5,12 +5,10 @@ import { AuthProvider, Roles, SignupIntent } from '@prisma/client'
 import * as bcrypt from 'bcrypt';
 import { JwtService } from "@nestjs/jwt";
 import { generateRefreshTokenPlain, hashRefreshToken, verifyRefreshToken } from "src/common/utils/token.util";
-import { EmailService } from "src/mail/mail.service";
 import { verificationEmailHtml } from "src/common/emails/verification-email";
 import { forgotPasswordEmailHtml } from "src/common/emails/forgot-password";
 import { CloudinaryService } from "cloudinary/cloudinary.service";
 import { QueueService } from "queue/queue.service";
-import { use } from "passport";
 
 
 @Injectable({})
@@ -202,22 +200,27 @@ export class AuthService {
 
             // create access token
             const payload = { id: user.id, email: user.email, role: user.role };
-            const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '30m' });
+            const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
 
-            // create refresh token plain & hashed, save on user with expiry (e.g., 7 days)
+            // Create a refresh token and store only its hash on this device session.
             const refreshPlain = generateRefreshTokenPlain();
             const hashed = await hashRefreshToken(refreshPlain);
             const expiresAt = dto.rememberMe ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-            await this.prisma.user.update({
-                where: { id: user.id },
-                data: { hashedRefreshToken: hashed, refreshTokenExpiresAt: expiresAt },
+            const session = await this.prisma.authSession.create({
+                data: {
+                    userId: user.id,
+                    tokenHash: hashed,
+                    expiresAt,
+                },
             });
 
             // return accessToken + user + refreshPlain (we will set cookie in controller / proxy)
             return {
                 accessToken,
                 refreshToken: refreshPlain,
+                refreshTokenExpiresAt: expiresAt,
+                sessionId: session.id,
                 user: {
                     id: user.id,
                     name: user.name,
@@ -239,41 +242,47 @@ export class AuthService {
     }
 
 
-    async refreshTokens(userId: string, refreshPlain: string) {
+    async refreshTokens(sessionId: string, refreshPlain: string) {
 
-        const user = await this.prisma.user.findUnique({ where: { id: userId } });
-        if (!user || !user.hashedRefreshToken) {
-            throw new BadRequestException('Invalid refresh token');
+        const session = await this.prisma.authSession.findUnique({
+            where: { id: sessionId },
+            include: { user: true },
+        });
+        if (!session) {
+            throw new UnauthorizedException('Invalid refresh token');
         }
+
+        const user = session.user;
 
         if (!user.isActive) {
             throw new UnauthorizedException('Your account is inactive');
         }
 
         // check expiry
-        if (!user.refreshTokenExpiresAt || user.refreshTokenExpiresAt < new Date()) {
-            // expiry or not set
-            // clear stored token
-            await this.prisma.user.update({ where: { id: userId }, data: { hashedRefreshToken: null, refreshTokenExpiresAt: null } });
-            throw new BadRequestException('Refresh token expired');
+        if (session.expiresAt < new Date()) {
+            await this.prisma.authSession.delete({ where: { id: session.id } });
+            throw new UnauthorizedException('Refresh token expired');
         }
 
-        const isValid = await verifyRefreshToken(refreshPlain, user.hashedRefreshToken);
+        const isValid = await verifyRefreshToken(refreshPlain, session.tokenHash);
         if (!isValid) {
-            // possible theft: clear stored token
-            await this.prisma.user.update({ where: { id: userId }, data: { hashedRefreshToken: null, refreshTokenExpiresAt: null } });
-            throw new BadRequestException('Invalid refresh token');
+            throw new UnauthorizedException('Invalid refresh token');
         }
 
-        // rotate: create new refresh token and update user
+        // Rotate the refresh token atomically for this session.
         const newRefreshPlain = generateRefreshTokenPlain();
         const newHashed = await hashRefreshToken(newRefreshPlain);
-        const newExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-        await this.prisma.user.update({
-            where: { id: userId },
-            data: { hashedRefreshToken: newHashed, refreshTokenExpiresAt: newExpiresAt },
+        const rotated = await this.prisma.authSession.updateMany({
+            where: {
+                id: session.id,
+                tokenHash: session.tokenHash,
+            },
+            data: { tokenHash: newHashed },
         });
+
+        if (rotated.count !== 1) {
+            throw new UnauthorizedException('Refresh token was already rotated');
+        }
 
         // new access token
         const payload = { id: user.id, email: user.email, role: user.role };
@@ -282,6 +291,8 @@ export class AuthService {
         return {
             accessToken: newAccessToken,
             refreshToken: newRefreshPlain,
+            refreshTokenExpiresAt: session.expiresAt,
+            sessionId: session.id,
             user: {
                 id: user.id,
                 email: user.email,
@@ -296,10 +307,9 @@ export class AuthService {
     }
 
 
-    async signout(userId: string) {
-        await this.prisma.user.update({
-            where: { id: userId },
-            data: { hashedRefreshToken: null, refreshTokenExpiresAt: null },
+    async signout(sessionId: string) {
+        await this.prisma.authSession.deleteMany({
+            where: { id: sessionId },
         });
         return { ok: true };
     }
@@ -330,12 +340,15 @@ export class AuthService {
 
             const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
 
-            await this.prisma.user.update({
-                where: { id: userId },
-                data: {
-                    password: hashedPassword
-                }
-            })
+            await this.prisma.$transaction([
+                this.prisma.user.update({
+                    where: { id: userId },
+                    data: { password: hashedPassword }
+                }),
+                this.prisma.authSession.deleteMany({
+                    where: { userId },
+                }),
+            ])
 
             return {
                 message: 'Password changed successfully',
@@ -375,9 +388,6 @@ export class AuthService {
 
             const base = process.env.ENV === 'PROD' ? process.env.FRONT_END_URL?.replace(/\/$/, '') : 'http://localhost:5173';
             const resetLink = `${base}/reset-password/${token}`;
-            console.log(resetLink);
-            console.log(token);
-
             const html = forgotPasswordEmailHtml(user.name ?? 'User', resetLink)
 
             await this.queue.addNotificationJob({ type: "email", to: user.email, subject: "Reset Password", html })
@@ -414,10 +424,24 @@ export class AuthService {
 
             const hashed = await bcrypt.hash(newPassword, 10);
 
-            await this.prisma.user.update({
+            const user = await this.prisma.user.findUnique({
                 where: { email: payload.email },
-                data: { password: hashed },
+                select: { id: true },
             });
+
+            if (!user) {
+                throw new BadRequestException('Invalid or expired token');
+            }
+
+            await this.prisma.$transaction([
+                this.prisma.user.update({
+                    where: { id: user.id },
+                    data: { password: hashed },
+                }),
+                this.prisma.authSession.deleteMany({
+                    where: { userId: user.id },
+                }),
+            ]);
 
             return { message: "Reset password successful" };
         } catch (error) {
@@ -447,6 +471,12 @@ export class AuthService {
                     isActive: newStatus
                 }
             });
+
+            if (!newStatus) {
+                await this.prisma.authSession.deleteMany({
+                    where: { userId: user.id },
+                });
+            }
 
             return {
                 message: `User ${newStatus ? 'ACTIVATED' : 'DEACTIVATED'} successfully`

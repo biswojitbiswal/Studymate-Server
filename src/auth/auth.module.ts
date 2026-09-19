@@ -6,12 +6,16 @@ import { JwtModule } from "@nestjs/jwt";
 import { JwtStrategy } from "./dtos/jwt.strategy";
 import { CloudinaryModule } from "cloudinary/cloudinary.module";
 import { QueueModule } from "queue/queue.module";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 
 @Module({
     imports: [
-        JwtModule.register({
-            secret: process.env.JWT_SECRET || 'supersecretkey',
-            signOptions: { expiresIn: '7d' }, // token expiry 
+        JwtModule.registerAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (config: ConfigService) => ({
+                secret: config.getOrThrow<string>('JWT_SECRET'),
+            }),
         }),
         PrismaModule,
         CloudinaryModule,

@@ -29,10 +29,11 @@ async function bootstrap() {
   const allowedOrigins = [
     'http://localhost:3000',
     'https://studynest-jade.vercel.app',
-  ];
+    process.env.FRONT_END_URL,
+  ].filter((origin): origin is string => Boolean(origin));
 
   app.enableCors({
-    origin: true,
+    origin: allowedOrigins,
     credentials: true,
   });
 

@@ -57,6 +57,7 @@ export class ChangePasswordDto {
 
   @IsString()
   @IsNotEmpty()
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
   newPassword: string;
 }
 
@@ -69,6 +70,7 @@ export class ForgotDto {
 export class ResetForgotPasswordDto {
   @IsString()
   @IsNotEmpty()
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
   newPassword: string;
 }
 

@@ -1,5 +1,5 @@
 import { Controller, Post, Body, Res, Req, Get, BadRequestException, UnauthorizedException, Param, Query, Patch, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
-import type { Response, Request } from 'express';
+import type { Response, Request, CookieOptions } from 'express';
 import { AuthService } from "./auth.service";
 import { Public } from "src/common/decorator/public.decorator";
 import { ChangePasswordDto, ForgotDto, ResetForgotPasswordDto, SigninDto, SignupDto, UpdateProfileDto } from "./dtos/auth.dto";
@@ -8,6 +8,16 @@ import { GetCurrentUserId } from 'src/common/decorator/get-current-user-id.decor
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorator/roles.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
+
+const refreshCookieOptions = (expiresAt?: Date): CookieOptions => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/',
+  ...(expiresAt
+    ? { maxAge: Math.max(0, expiresAt.getTime() - Date.now()) }
+    : {}),
+});
 
 @Controller({
   path: 'auth',
@@ -34,26 +44,22 @@ export class AuthController {
   @Public()
   @Post('signin')
   async signin(@Body() dto: SigninDto, @Res({ passthrough: true }) res: Response) {
-    const { accessToken, refreshToken, user } = await this.authService.signin(dto);
+    const {
+      accessToken,
+      refreshToken,
+      refreshTokenExpiresAt,
+      sessionId,
+      user,
+    } = await this.authService.signin(dto);
 
     // set httpOnly refresh cookie (refreshToken is plaintext; store hashed in DB)
-    const isProd = process.env.NODE_ENV === 'production';
-
     res.cookie(
       'sm_refresh',
-      JSON.stringify({ userId: user.id, t: refreshToken }),
-      {
-        httpOnly: true,
-        // secure: isProd,
-        // sameSite: isProd ? 'none' : 'lax', // 🔑 KEY LINE
-        secure: true,
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-      },
+      JSON.stringify({ sessionId, t: refreshToken }),
+      refreshCookieOptions(refreshTokenExpiresAt),
     );
 
-    // return access token in body (client stores in memory or localStorage temporarily)
+    // Return the short-lived access token; the frontend keeps it in memory.
     return { accessToken, user };
   }
 
@@ -62,44 +68,42 @@ export class AuthController {
   @Public()
   @Post('refresh')
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-
-    const cookie = req.cookies['sm_refresh'];
-    console.log("🔥 REFRESH API HIT", req.headers.cookie);
-    if (!cookie) throw new UnauthorizedException('No refresh token');
-    // console.log(cookie, "=================");
-
-
-    let parsed: { userId: string; t: string };
     try {
-      parsed = JSON.parse(cookie);
-    } catch {
-      throw new BadRequestException('Invalid refresh cookie');
+      const cookie = req.cookies['sm_refresh'];
+      if (!cookie) throw new UnauthorizedException('No refresh token');
+
+      let parsed: { sessionId?: string; t?: string };
+      try {
+        parsed = JSON.parse(cookie);
+      } catch {
+        throw new BadRequestException('Invalid refresh cookie');
+      }
+
+      const { sessionId, t } = parsed;
+      if (!sessionId || !t) {
+        throw new BadRequestException('Invalid refresh cookie');
+      }
+
+      const {
+        accessToken,
+        refreshToken: newRefresh,
+        refreshTokenExpiresAt,
+        user,
+      } = await this.authService.refreshTokens(sessionId, t);
+
+      res.cookie(
+        'sm_refresh',
+        JSON.stringify({ sessionId, t: newRefresh }),
+        refreshCookieOptions(refreshTokenExpiresAt),
+      );
+
+      return { accessToken, user };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        res.clearCookie('sm_refresh', refreshCookieOptions());
+      }
+      throw error;
     }
-
-    const { userId, t } = parsed;
-
-    const { accessToken, refreshToken: newRefresh, user } = await this.authService.refreshTokens(userId, t);
-
-    // rotate cookie: set new refresh (plaintext) as hashed stored in DB by service
-    const isProd = process.env.NODE_ENV === 'production';
-
-    res.cookie(
-      'sm_refresh',
-      JSON.stringify({ userId: user.id, t: newRefresh }),
-      {
-        httpOnly: true,
-        // secure: isProd,
-        // sameSite: isProd ? 'none' : 'lax', // 🔑 KEY LINE\
-        secure: true,
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-      },
-    );
-
-
-
-    return { accessToken, user };
   }
 
 
@@ -111,14 +115,14 @@ export class AuthController {
     if (cookie) {
       try {
         const parsed = JSON.parse(cookie);
-        if (parsed?.userId) {
-          await this.authService.signout(parsed.userId);
+        if (parsed?.sessionId) {
+          await this.authService.signout(parsed.sessionId);
         }
       } catch { }
     }
 
     // clear cookie
-    res.clearCookie('sm_refresh', { path: '/' });
+    res.clearCookie('sm_refresh', refreshCookieOptions());
     return { ok: true };
   }
 

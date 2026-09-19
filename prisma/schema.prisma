@@ -46,9 +46,6 @@ model User {
   isActive                Boolean                   @default(true)
   profileCompleted        Boolean                   @default(false)
 
-  hashedRefreshToken      String?
-  refreshTokenExpiresAt   DateTime?
-
   lastSeenAt              DateTime?
   isOnline                Boolean?
 
@@ -65,10 +62,27 @@ model User {
   transactions            Transaction[]
   wishlists               Wishlist[]
   notifications           Notification[]
+  authSessions            AuthSession[]
 
 
   createdAt               DateTime                  @default(now())
   updatedAt               DateTime                  @updatedAt
+}
+
+model AuthSession {
+  id                      String                    @id @default(auto()) @map("_id") @db.ObjectId
+
+  userId                  String                    @db.ObjectId
+  user                    User                      @relation(fields: [userId], references: [id])
+
+  tokenHash               String
+  expiresAt               DateTime
+
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Student{
