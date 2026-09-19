@@ -5,6 +5,7 @@ import { GetCurrentUserId } from "common/decorator/get-current-user-id.decorator
 import { PaginationDto } from "common/dtos/pagination.dto";
 import { Public } from "common/decorator/public.decorator";
 import { OptionalJwtAuthGuard } from "common/guards/optionaljwt.guard";
+import { Roles } from "common/decorator/roles.decorator";
 
 
 @Controller({
@@ -16,6 +17,7 @@ export class WishlistController{
 
 
     @UseGuards(AuthGuard)
+    @Roles('STUDENT')
     @Get()
     async getMyFavorites(@GetCurrentUserId() userId: string, @Query() dto: PaginationDto){
         console.log(userId);
@@ -26,6 +28,7 @@ export class WishlistController{
 
     // @Public()
     @UseGuards(AuthGuard)
+    @Roles('STUDENT')
     @Post(':id/toggle')
     async toggle(@Param('id') id: string, @GetCurrentUserId() userId: string){
         return await this.wishlistService.toggle(id, userId)

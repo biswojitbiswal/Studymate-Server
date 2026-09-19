@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma, Roles, SignupIntent, Status, TutorStatus } from "@prisma/client";
 import { PaginationDto } from "src/common/dtos/pagination.dto";
 import { PrismaService } from "src/prisma/prisma.service";
@@ -67,6 +67,15 @@ export class TutorService {
 
         if (!user) {
             throw new NotFoundException("User not found");
+        }
+
+        if (
+            user.role !== Roles.STUDENT ||
+            user.signupIntent !== SignupIntent.TUTOR
+        ) {
+            throw new ForbiddenException(
+                "Tutor applications are only available to accounts registered as tutors",
+            );
         }
 
         const existingTutor = await this.prisma.tutor.findUnique({
@@ -720,6 +729,12 @@ export class TutorService {
 
             if (tutor.tutorStatus === 'APPROVED') {
                 throw new BadRequestException('Tutor already approved');
+            }
+
+            if (tutor.user.signupIntent !== SignupIntent.TUTOR) {
+                throw new BadRequestException(
+                    'This application is not linked to a tutor account',
+                );
             }
 
             await this.prisma.$transaction(async (tx) => {

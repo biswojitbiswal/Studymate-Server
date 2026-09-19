@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, HttpException, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, HttpException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
 import { ChangePasswordDto, ResetForgotPasswordDto, SigninDto, SignupDto, UpdateProfileDto } from "./dtos/auth.dto";
 import { AuthProvider, Roles, SignupIntent } from '@prisma/client'
@@ -52,7 +52,6 @@ export class AuthService {
                     name,
                     phone: phone ?? existing.phone,
                     password: hashedPassword ?? existing.password,
-                    signupIntent,
                 },
             });
 
@@ -247,6 +246,10 @@ export class AuthService {
             throw new BadRequestException('Invalid refresh token');
         }
 
+        if (!user.isActive) {
+            throw new UnauthorizedException('Your account is inactive');
+        }
+
         // check expiry
         if (!user.refreshTokenExpiresAt || user.refreshTokenExpiresAt < new Date()) {
             // expiry or not set
@@ -284,6 +287,8 @@ export class AuthService {
                 email: user.email,
                 phone: user.phone,
                 role: user.role,
+                signupIntent: user.signupIntent,
+                profileCompleted: user.profileCompleted,
                 name: user.name,
                 avatar: user.avatar
             }
@@ -507,4 +512,3 @@ export class AuthService {
         }
     }
 }
-

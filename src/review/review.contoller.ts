@@ -39,6 +39,7 @@ export class ReviewController{
 
 
     @UseGuards(AuthGuard)
+    @Roles('STUDENT')
     @Get(':classId')
     async getByStudent(@Param('classId') classId: string, @GetCurrentUserId() userId: string){
         return await this.reviewService.getByStudent(classId, userId)

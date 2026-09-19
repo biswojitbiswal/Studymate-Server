@@ -53,7 +53,12 @@ export class StudentService {
         const skip = (page - 1) * limit;
         const search = dto.search?.trim();
 
-        const whereCondition: Prisma.StudentWhereInput = search
+        const whereCondition: Prisma.StudentWhereInput = {
+            user: {
+                role: 'STUDENT',
+                signupIntent: 'STUDENT',
+            },
+            ...(search
             ? {
                 OR: [
                     {
@@ -94,7 +99,8 @@ export class StudentService {
                     },
                 ],
             }
-            : {};
+            : {}),
+        };
 
         const [students, total] = await this.prisma.$transaction([
             this.prisma.student.findMany({

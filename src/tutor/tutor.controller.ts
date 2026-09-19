@@ -8,6 +8,8 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { PaginationDto } from "src/common/dtos/pagination.dto";
 import { TutorApplyDto, TutorBrowseFilterDto, TutorProfileUpdateDto } from "./dtos/tutor.dto";
 import { Public } from "common/decorator/public.decorator";
+import { AccountIntents, AllowTutorApplicant } from "common/decorator/account-access.decorator";
+import { SignupIntent } from "@prisma/client";
 
 @Controller({
     path: "tutor",
@@ -18,6 +20,8 @@ export class TutorController {
 
 
     @UseInterceptors(FileInterceptor('avatar'))
+    @AllowTutorApplicant()
+    @AccountIntents(SignupIntent.TUTOR)
     @Post('apply')
     async tutorApply(
         @GetCurrentUserId() userId: string,
@@ -48,6 +52,8 @@ export class TutorController {
 
     @UseGuards(AuthGuard, RolesGuard)
     @Roles('TUTOR', 'STUDENT')
+    @AllowTutorApplicant()
+    @AccountIntents(SignupIntent.TUTOR)
     @Get('me')
     async me(@GetCurrentUserId() userId: string) {
         return await this.tutorService.me(userId)
@@ -101,4 +107,3 @@ export class TutorController {
         return await this.tutorService.getById(id)
     }
 }
-

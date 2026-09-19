@@ -7,6 +7,7 @@ import { MongoExceptionFilter } from './common/filters/mongo-exception.filter';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './common/guards/auth.guard';
+import { AccountAccessGuard } from './common/guards/account-access.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { AuthModule } from './auth/auth.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
@@ -90,6 +91,10 @@ import { AdminModule } from 'admin/admin.module';
     {
       provide: APP_GUARD,
       useClass: AuthGuard
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AccountAccessGuard
     },
     {
       provide: APP_GUARD,

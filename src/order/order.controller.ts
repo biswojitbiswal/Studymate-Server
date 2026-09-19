@@ -16,6 +16,7 @@ export class OrderController{
 
 
     @UseGuards(AuthGuard)
+    @Roles('STUDENT')
     @Post()
     async create(@GetCurrentUserId() userId: string, @Body() dto: CreateOrderDto){
         return await this.orderService.create(dto, userId);
@@ -38,6 +39,7 @@ export class OrderController{
     }
 
     @UseGuards(AuthGuard)
+    @Roles('STUDENT')
     @Get("checkout/:classId")
     async checkout(@GetCurrentUserId() userId: string, @Param('classId') classId: string){
         return await this.orderService.checkout(classId, userId);
@@ -45,6 +47,7 @@ export class OrderController{
 
 
     @UseGuards(AuthGuard)
+    @Roles('STUDENT')
     @Get(":orderId/status")
     async getStatus(@Param('orderId') orderId: string){
         return await this.orderService.getStatus(orderId)
@@ -52,6 +55,7 @@ export class OrderController{
 
 
     @UseGuards(AuthGuard)
+    @Roles('STUDENT')
     @Get(":orderId")
     async getById(@Param('orderId') orderId: string, @GetCurrentUserId() userId: string){
         return await this.orderService.getById(orderId, userId)

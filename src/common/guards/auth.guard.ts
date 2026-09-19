@@ -64,7 +64,8 @@ export class AuthGuard implements CanActivate {
           id: true,
           email: true,
           role: true,
-          // isActive: true,  // if you add this field later
+          signupIntent: true,
+          isActive: true,
         },
       });
 
@@ -73,10 +74,9 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException('User not found');
       }
 
-      // Optional: if you add isActive / status later
-      // if (!user.isActive) {
-      //   throw new UnauthorizedException('User is inactive');
-      // }
+      if (!user.isActive) {
+        throw new UnauthorizedException('Your account is inactive');
+      }
 
       // 4) Attach user to request
       request.user = user;
