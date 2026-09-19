@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import Razorpay from "razorpay";
 import { OrderStatus, SeatReservation } from "src/common/enums/order.enum";
@@ -9,16 +9,19 @@ import * as crypto from 'crypto'
 import { CouponService } from "src/coupon/coupon.service";
 import { ClassEnrollmentService } from "src/class-enrollment/class-enrollment.service";
 import { LedgerService } from "payout/ledger.service";
+import { InvoiceService } from "src/invoice/invoice.service";
 
 @Injectable({})
 export class PaymentService {
+    private readonly logger = new Logger(PaymentService.name);
     private razorpay: Razorpay
     constructor(
         private readonly prisma: PrismaService,
         private readonly config: ConfigService,
         private readonly couponService: CouponService,
         private readonly classEnrollmentService: ClassEnrollmentService,
-        private readonly ledgerService: LedgerService
+        private readonly ledgerService: LedgerService,
+        private readonly invoiceService: InvoiceService,
     ) {
         this.razorpay = new Razorpay({
             key_id: this.config.get<string>("RAZOR_PAY_API_KEY"),
@@ -32,7 +35,7 @@ export class PaymentService {
             console.log(orderId, " --------------");
 
             const order = await this.prisma.order.findUnique({
-                where: { id: orderId }
+                where: { id: orderId, userId }
             })
             console.log(order);
 
@@ -152,7 +155,14 @@ export class PaymentService {
                 where: { providerPaymentId: paymentId },
             });
 
-            if (existingTransaction) {
+            const isCompletedDuplicate =
+                existingTransaction?.status === PaymentStatus.SUCCESS &&
+                event.event === 'payment.captured';
+            const isFailedDuplicate =
+                existingTransaction?.status === PaymentStatus.FAILED &&
+                event.event === 'payment.failed';
+
+            if (isCompletedDuplicate || isFailedDuplicate) {
                 console.log('⚠️ Duplicate webhook ignored:', paymentId);
                 return { received: true };
             }
@@ -286,14 +296,22 @@ export class PaymentService {
             await this.ledgerService.create({ tutorId: klass?.tutorId, amount: tutorPayout, referenceId: klass?.id });
         });
 
+        try {
+            await this.invoiceService.prepareForPaidOrder(transaction.orderId);
+        } catch (error) {
+            this.logger.error(
+                `Paid order ${transaction.orderId} could not queue its invoice`,
+                error instanceof Error ? error.stack : String(error),
+            );
+        }
+
         console.log("Order marked paid and enrollment created, ledger & wallet created");
     }
 
 
 
-    async handlePaymentFailed(payload: any) {
+    async handlePaymentFailed(payment: any) {
         try {
-            const payment = payload.payload.payment.entity;
             const razorpayOrderId = payment.order_id;
 
             const transaction = await this.prisma.transaction.findFirst({
@@ -303,12 +321,17 @@ export class PaymentService {
                 }
             })
             if (!transaction) return;
+            if (transaction.status === PaymentStatus.FAILED) return;
 
             await this.prisma.$transaction(async (tx) => {
 
                 await tx.transaction.update({
                     where: { id: transaction.id },
-                    data: { status: PaymentStatus.FAILED }
+                    data: {
+                        providerPaymentId: payment.id,
+                        status: PaymentStatus.FAILED,
+                        failureReason: payment?.error_description ?? payment?.error_reason ?? 'Payment failed',
+                    }
                 })
 
                 const order = await tx.order.update({

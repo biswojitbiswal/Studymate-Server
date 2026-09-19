@@ -352,10 +352,10 @@ export class OrderService {
 
 
 
-    async getStatus(orderId: string) {
+    async getStatus(orderId: string, userId: string) {
         try {
-            const order = await this.prisma.order.findUnique({
-                where: { id: orderId },
+            const order = await this.prisma.order.findFirst({
+                where: { id: orderId, userId },
                 select: {
                     id: true,
                     status: true
@@ -578,6 +578,16 @@ export class OrderService {
                     orderBy: {
                         createdAt: "desc",
                     },
+                    include: {
+                        invoice: {
+                            select: {
+                                invoiceNo: true,
+                                status: true,
+                                templateVersion: true,
+                                issuedAt: true,
+                            }
+                        }
+                    }
                 }),
 
                 this.prisma.order.count({ where }),
@@ -596,16 +606,34 @@ export class OrderService {
     }
 
 
+    async getAdminById(orderId: string) {
+        return this.getOrderDetails(orderId);
+    }
+
     async getById(orderId: string, userId: string) {
+        return this.getOrderDetails(orderId, userId);
+    }
+
+    private async getOrderDetails(orderId: string, userId?: string) {
 
         const order = await this.prisma.order.findFirst({
             where: {
                 id: orderId,
+                ...(userId ? { userId } : {}),
             },
             include: {
                 transactions: true,
                 couponRedemption: true,
-                user: true
+                user: true,
+                invoice: {
+                    select: {
+                        invoiceNo: true,
+                        status: true,
+                        templateVersion: true,
+                        issuedAt: true,
+                        failureReason: true,
+                    }
+                }
             }
         });
 

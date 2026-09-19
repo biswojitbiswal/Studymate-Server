@@ -41,6 +41,7 @@ import { QueueModule } from 'queue/queue.module';
 import { ChatModule } from 'chat/chat.module';
 import { PayoutModule } from 'payout/payout.module';
 import { AdminModule } from 'admin/admin.module';
+import { InvoiceModule } from './invoice/invoice.module';
 
 
 @Module({
@@ -81,7 +82,8 @@ import { AdminModule } from 'admin/admin.module';
     QueueModule,
     ChatModule,
     PayoutModule,
-    AdminModule
+    AdminModule,
+    InvoiceModule
   ],
   providers: [
     {

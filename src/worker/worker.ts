@@ -4,6 +4,8 @@ import { Worker } from "bullmq";
 import IORedis from "ioredis";
 import { sendEmail } from "common/utils/send-email.util";
 import crypto from "crypto";
+import { InvoiceStatus, PrismaClient } from '@prisma/client';
+import { generateInvoicePdf } from 'invoice/invoice-generator';
 
 
 const connection = new IORedis({
@@ -11,6 +13,7 @@ const connection = new IORedis({
   port: Number(process.env.REDIS_PORT) || 6379,
   maxRetriesPerRequest: null,
 });
+const prisma = new PrismaClient();
 
 const worker = new Worker(
   "notification-queue",
@@ -69,6 +72,62 @@ const worker = new Worker(
   { connection, concurrency: 3 }
 );
 
+const invoiceWorker = new Worker(
+  'invoice-queue',
+  async (job) => {
+    const invoiceId = String(job.data?.invoiceId ?? '');
+    if (!invoiceId) throw new Error('Invalid invoice job payload');
+
+    await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        status: InvoiceStatus.PROCESSING,
+        failureReason: null,
+      },
+    });
+
+    try {
+      const invoice = await prisma.invoice.findUnique({
+        where: { id: invoiceId },
+      });
+      if (!invoice) throw new Error('Invoice record not found');
+
+      const issuedAt = new Date();
+      const pdf = await generateInvoicePdf({
+        invoiceNo: invoice.invoiceNo,
+        issuedAt,
+        issuer: invoice.issuerSnapshot as Record<string, any>,
+        customer: invoice.customerSnapshot as Record<string, any>,
+        item: invoice.itemSnapshot as Record<string, any>,
+        payment: invoice.paymentSnapshot as Record<string, any>,
+      });
+
+      await prisma.invoice.update({
+        where: { id: invoiceId },
+        data: {
+          status: InvoiceStatus.READY,
+          issuedAt,
+          pdfData: Uint8Array.from(pdf),
+          failureReason: null,
+        },
+      });
+    } catch (error) {
+      const maxAttempts = job.opts.attempts ?? 1;
+      const isLastAttempt = job.attemptsMade + 1 >= maxAttempts;
+      await prisma.invoice.update({
+        where: { id: invoiceId },
+        data: {
+          status: isLastAttempt ? InvoiceStatus.FAILED : InvoiceStatus.PENDING,
+          failureReason:
+            error instanceof Error ? error.message : 'Invoice generation failed',
+        },
+      });
+      throw error;
+    }
+  },
+  { connection, concurrency: 2 },
+);
+
 // ✅ listeners
 worker.on("completed", (job) => {
   console.log(`Job ${job.id} completed`);
@@ -81,4 +140,15 @@ worker.on("failed", (job, err) => {
   );
 });
 
-console.log("Worker is running...");
+invoiceWorker.on('completed', (job) => {
+  console.log(`Invoice job ${job.id} completed`);
+});
+
+invoiceWorker.on('failed', (job, err) => {
+  console.error(
+    `Invoice job ${job?.id} failed (attempt ${job?.attemptsMade}/${job?.opts.attempts}):`,
+    err.message,
+  );
+});
+
+console.log("Notification and invoice workers are running...");

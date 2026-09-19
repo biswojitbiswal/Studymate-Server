@@ -40,7 +40,8 @@ export type NotificationJob =
 
 @Injectable()
 export class QueueService {
-    private queue: Queue;
+    private notificationQueue: Queue;
+    private invoiceQueue: Queue;
 
     constructor() {
         const connection = new IORedis({
@@ -49,7 +50,8 @@ export class QueueService {
             maxRetriesPerRequest: null,
         });
 
-        this.queue = new Queue("notification-queue", { connection });
+        this.notificationQueue = new Queue("notification-queue", { connection });
+        this.invoiceQueue = new Queue("invoice-queue", { connection });
     }
 
 
@@ -79,7 +81,7 @@ export class QueueService {
             .update(uniqueString)
             .digest("hex");
 
-        await this.queue.add(data.type, data, {
+        await this.notificationQueue.add(data.type, data, {
             jobId,
             priority: (data as any).priority ?? 1,
             attempts: (data as any).attempts ?? 3,
@@ -89,5 +91,22 @@ export class QueueService {
                 delay: (data as any).backoffDelay ?? 3000,
             },
         });
+    }
+
+    async addInvoiceJob(invoiceId: string) {
+        await this.invoiceQueue.add(
+            "generate-invoice",
+            { invoiceId },
+            {
+                jobId: `invoice-${invoiceId}`,
+                attempts: 3,
+                backoff: {
+                    type: "exponential",
+                    delay: 5000,
+                },
+                removeOnComplete: true,
+                removeOnFail: true,
+            },
+        );
     }
 }

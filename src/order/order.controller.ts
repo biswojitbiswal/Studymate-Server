@@ -46,11 +46,19 @@ export class OrderController{
     }
 
 
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles('ADMIN')
+    @Get("admin/:orderId")
+    async getAdminOrderById(@Param('orderId') orderId: string){
+        return await this.orderService.getAdminById(orderId)
+    }
+
+
     @UseGuards(AuthGuard)
     @Roles('STUDENT')
     @Get(":orderId/status")
-    async getStatus(@Param('orderId') orderId: string){
-        return await this.orderService.getStatus(orderId)
+    async getStatus(@Param('orderId') orderId: string, @GetCurrentUserId() userId: string){
+        return await this.orderService.getStatus(orderId, userId)
     }
 
 

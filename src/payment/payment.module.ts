@@ -5,9 +5,10 @@ import { PaymentService } from "./payment.service";
 import { CouponModule } from "src/coupon/coupon.module";
 import { ClassEnrollmentModule } from "src/class-enrollment/class-enrollment.module";
 import { PayoutModule } from "payout/payout.module";
+import { InvoiceModule } from "src/invoice/invoice.module";
 
 @Module({
-    imports: [PrismaModule, CouponModule, ClassEnrollmentModule, PayoutModule],
+    imports: [PrismaModule, CouponModule, ClassEnrollmentModule, PayoutModule, InvoiceModule],
     controllers: [PaymentController],
     providers: [PaymentService],
     exports: [PaymentService]
