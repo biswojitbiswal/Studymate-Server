@@ -1,13 +1,36 @@
-import { Controller, Post, Body, Res, Req, Get, BadRequestException, UnauthorizedException, Param, Query, Patch, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Res,
+  Req,
+  Get,
+  BadRequestException,
+  UnauthorizedException,
+  Param,
+  Query,
+  Patch,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import type { Response, Request, CookieOptions } from 'express';
-import { AuthService } from "./auth.service";
-import { Public } from "src/common/decorator/public.decorator";
-import { ChangePasswordDto, ForgotDto, ResetForgotPasswordDto, SigninDto, SignupDto, UpdateProfileDto } from "./dtos/auth.dto";
+import { AuthService } from './auth.service';
+import { Public } from 'src/common/decorator/public.decorator';
+import {
+  ChangePasswordDto,
+  ForgotDto,
+  ResetForgotPasswordDto,
+  SigninDto,
+  SignupDto,
+  UpdateProfileDto,
+} from './dtos/auth.dto';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { GetCurrentUserId } from 'src/common/decorator/get-current-user-id.decorator';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorator/roles.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { TurnstileService } from 'src/common/turnstile/turnstile.service';
 
 const refreshCookieOptions = (expiresAt?: Date): CookieOptions => ({
   httpOnly: true,
@@ -21,29 +44,35 @@ const refreshCookieOptions = (expiresAt?: Date): CookieOptions => ({
 
 @Controller({
   path: 'auth',
-  version: '1'
+  version: '1',
 })
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
-
+  constructor(
+    private readonly authService: AuthService,
+    private readonly turnstileService: TurnstileService,
+  ) {}
 
   @Public()
   @Post('signup')
-  async signup(@Body() dto: SignupDto) {
-    return await this.authService.signup(dto)
+  async signup(@Body() dto: SignupDto, @Req() req: Request) {
+    await this.turnstileService.verify(dto.turnstileToken, req.ip, 'signup');
+    return await this.authService.signup(dto);
   }
-
 
   @Public()
   @Post('verify-email/:token')
   async emailverification(@Param('token') token: string) {
-    return await this.authService.emailverification(token)
+    return await this.authService.emailverification(token);
   }
-
 
   @Public()
   @Post('signin')
-  async signin(@Body() dto: SigninDto, @Res({ passthrough: true }) res: Response) {
+  async signin(
+    @Body() dto: SigninDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.turnstileService.verify(dto.turnstileToken, req.ip, 'signin');
     const {
       accessToken,
       refreshToken,
@@ -63,11 +92,12 @@ export class AuthController {
     return { accessToken, user };
   }
 
-
-
   @Public()
   @Post('refresh')
-  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
       const cookie = req.cookies['sm_refresh'];
       if (!cookie) throw new UnauthorizedException('No refresh token');
@@ -106,11 +136,12 @@ export class AuthController {
     }
   }
 
-
-
   @Public()
   @Post('signout')
-  async signout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async signout(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const cookie = req.cookies['sm_refresh'];
     if (cookie) {
       try {
@@ -118,7 +149,7 @@ export class AuthController {
         if (parsed?.sessionId) {
           await this.authService.signout(parsed.sessionId);
         }
-      } catch { }
+      } catch {}
     }
 
     // clear cookie
@@ -126,13 +157,16 @@ export class AuthController {
     return { ok: true };
   }
 
-
   @Public()
   @Post('forgot-password')
-  async forgotpassword(@Body() dto: ForgotDto) {
-    return await this.authService.forgotPassword(dto.email)
+  async forgotpassword(@Body() dto: ForgotDto, @Req() req: Request) {
+    await this.turnstileService.verify(
+      dto.turnstileToken,
+      req.ip,
+      'forgot_password',
+    );
+    return await this.authService.forgotPassword(dto.email);
   }
-
 
   @Public()
   @Post('reset-password')
@@ -140,9 +174,8 @@ export class AuthController {
     @Query('token') token: string,
     @Body() dto: ResetForgotPasswordDto,
   ) {
-    return await this.authService.resetPassword(dto, token)
+    return await this.authService.resetPassword(dto, token);
   }
-
 
   @UseGuards(AuthGuard)
   @Patch('change-password')
@@ -150,19 +183,15 @@ export class AuthController {
     @GetCurrentUserId() userId: string,
     @Body() dto: ChangePasswordDto,
   ) {
-    return await this.authService.changePassword(userId, dto)
+    return await this.authService.changePassword(userId, dto);
   }
-
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Patch('toggle/:userId')
-  async toggle(
-    @Param('userId') userId: string,
-  ) {
-    return await this.authService.toggle(userId)
+  async toggle(@Param('userId') userId: string) {
+    return await this.authService.toggle(userId);
   }
-
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -171,8 +200,8 @@ export class AuthController {
   async update(
     @Param('userId') userId: string,
     @Body() dto: UpdateProfileDto,
-    @UploadedFile() file?: Express.Multer.File
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return await this.authService.update(userId, dto, file)
+    return await this.authService.update(userId, dto, file);
   }
 }

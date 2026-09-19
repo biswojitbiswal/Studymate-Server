@@ -1,54 +1,71 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength, IsEnum, IsPhoneNumber, ValidateIf, IsBoolean } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+  IsEnum,
+  ValidateIf,
+  IsBoolean,
+  MaxLength,
+} from 'class-validator';
 import { Roles, AuthProvider, SignupIntent } from '@prisma/client';
 
 export class SignupDto {
-    @IsNotEmpty()
-    @IsString()
-    name!: string;
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2048)
+  turnstileToken!: string;
 
-    @IsNotEmpty()
-    @IsEmail()
-    email!: string;
+  @IsNotEmpty()
+  @IsString()
+  name!: string;
 
-    @ValidateIf((o) => o.provider === AuthProvider.CREDENTIALS)
-    @IsOptional()
-    @IsString() // auto detects format; you can use 'IN' for India or any country
-    phone?: string;
+  @IsNotEmpty()
+  @IsEmail()
+  email!: string;
 
-    @ValidateIf((o) => o.provider === AuthProvider.CREDENTIALS)
-    @IsNotEmpty()
-    @IsString()
-    @MinLength(6, { message: 'Password must be at least 6 characters long' })
-    password?: string;
+  @ValidateIf((o) => o.provider === AuthProvider.CREDENTIALS)
+  @IsOptional()
+  @IsString() // auto detects format; you can use 'IN' for India or any country
+  phone?: string;
 
-    @IsEnum(AuthProvider)
-    provider: AuthProvider; // 'CREDENTIALS' | 'GOOGLE' | 'APPLE'
+  @ValidateIf((o) => o.provider === AuthProvider.CREDENTIALS)
+  @IsNotEmpty()
+  @IsString()
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  password?: string;
 
-    @IsOptional() // default role is STUDENT → so role is optional
-    @IsEnum(SignupIntent, { message: 'Signup Intent must be STUDENT or TUTOR' })
-    signupIntent?: SignupIntent;
+  @IsEnum(AuthProvider)
+  provider: AuthProvider; // 'CREDENTIALS' | 'GOOGLE' | 'APPLE'
+
+  @IsOptional() // default role is STUDENT → so role is optional
+  @IsEnum(SignupIntent, { message: 'Signup Intent must be STUDENT or TUTOR' })
+  signupIntent?: SignupIntent;
 }
-
 
 export class SigninDto {
-    @IsNotEmpty()
-    @IsEmail()
-    email: string;
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2048)
+  turnstileToken: string;
 
-    @IsNotEmpty()
-    @IsString()
-    password: string;
+  @IsNotEmpty()
+  @IsEmail()
+  email: string;
 
+  @IsNotEmpty()
+  @IsString()
+  password: string;
 
-    @IsBoolean()
-    @IsOptional()
-    rememberMe?: boolean
+  @IsBoolean()
+  @IsOptional()
+  rememberMe?: boolean;
 
-    // @IsOptional()
-    // @IsEnum(Roles)
-    // role?: Roles;
+  // @IsOptional()
+  // @IsEnum(Roles)
+  // role?: Roles;
 }
-
 
 export class ChangePasswordDto {
   @IsString()
@@ -62,6 +79,11 @@ export class ChangePasswordDto {
 }
 
 export class ForgotDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2048)
+  turnstileToken: string;
+
   @IsEmail()
   @IsNotEmpty()
   email: string;
@@ -74,17 +96,16 @@ export class ResetForgotPasswordDto {
   newPassword: string;
 }
 
-
-export class UpdateProfileDto{
+export class UpdateProfileDto {
   @IsOptional()
   @IsString()
-  name?: string
-
-  @IsOptional()
-  @IsString()
-  email?: string
+  name?: string;
 
   @IsOptional()
   @IsString()
-  phone?: string
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
 }

@@ -3,13 +3,13 @@ import { Global, Module } from '@nestjs/common';
 import { WinstonModule } from 'nest-winston';
 import { createWinstonTransports } from './logger.factory';
 
-const { transportConsole, transportFile } = createWinstonTransports();
+const transports = Object.values(createWinstonTransports());
 
 @Global()
 @Module({
   imports: [
     WinstonModule.forRoot({
-      transports: [transportConsole, transportFile],
+      transports,
       exitOnError: false,
     }),
   ],
