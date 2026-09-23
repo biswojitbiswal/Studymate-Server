@@ -7,7 +7,7 @@ services:
     container_name: studynest-app
 
     ports:
-      - "4040:4040"
+      - "127.0.0.1:4040:4040"
 
     env_file:
       - .env
