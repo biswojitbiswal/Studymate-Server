@@ -337,7 +337,10 @@ export class TutorAvailibilityService {
             const sessions = await this.prisma.session.findMany({
                 where: {
                     tutorId: tutor.id,
-                    date: dateString
+                    date: dateString,
+                    status: {
+                        in: ['SCHEDULED', 'PENDING_TUTOR_APPROVAL'],
+                    },
                 },
                 select: {
                     id: true,

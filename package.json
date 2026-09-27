@@ -13,7 +13,10 @@
     "start:worker": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/worker/worker.ts",
     "dev": "concurrently \"npm run start:dev\" \"npm run start:worker\"",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:ci": "jest --ci --runInBand"
   },
   "dependencies": {
     "@getbrevo/brevo": "^5.0.4",
@@ -26,6 +29,7 @@
     "@nestjs/platform-express": "^11.1.9",
     "@nestjs/platform-socket.io": "^11.1.17",
     "@nestjs/schedule": "^6.1.0",
+    "@nestjs/terminus": "^12.1.0",
     "@nestjs/websockets": "^11.1.17",
     "@prisma/client": "^6.17.1",
     "@sendgrid/mail": "^8.1.6",
@@ -97,8 +101,14 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "moduleNameMapper": {
+      "^src/(.*)$": "<rootDir>/$1",
+      "^common/(.*)$": "<rootDir>/common/$1"
+    },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.ts",
+      "!**/*.spec.ts",
+      "!main.ts"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"

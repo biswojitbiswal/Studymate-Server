@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Queue } from "bullmq";
-import IORedis from "ioredis";
 import crypto from "crypto";
+import { connection } from '../config/redis.config';
 
 
 export type NotificationJob =
@@ -44,12 +44,6 @@ export class QueueService {
     private invoiceQueue: Queue;
 
     constructor() {
-        const connection = new IORedis({
-            host: process.env.ENV === "PROD" ? process.env.REDIS_HOST : "localhost",
-            port: Number(process.env.REDIS_PORT) || 6379,
-            maxRetriesPerRequest: null,
-        });
-
         this.notificationQueue = new Queue("notification-queue", { connection });
         this.invoiceQueue = new Queue("invoice-queue", { connection });
     }

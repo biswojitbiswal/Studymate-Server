@@ -42,6 +42,7 @@ import { ChatModule } from 'chat/chat.module';
 import { PayoutModule } from 'payout/payout.module';
 import { AdminModule } from 'admin/admin.module';
 import { InvoiceModule } from './invoice/invoice.module';
+import { HealthModule } from 'health/health.module';
 
 
 @Module({
@@ -53,6 +54,7 @@ import { InvoiceModule } from './invoice/invoice.module';
     CronModule,
     LoggerModule,
     PrismaModule,
+    HealthModule,
     AuthModule,
     CloudinaryModule,
     BoardModule,
