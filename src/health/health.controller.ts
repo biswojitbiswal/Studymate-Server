@@ -1,8 +1,9 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Req } from '@nestjs/common';
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
 import { Public } from 'common/decorator/public.decorator';
 import { PrismaService } from 'prisma/prisma.service';
 import { connection } from '../config/redis.config';
+import { Request } from 'express';
 
 @Public()
 @Controller({
@@ -15,7 +16,8 @@ export class HealthController {
         private readonly prisma: PrismaService
     ) { }
     @Get('live')
-    live() {
+    live(@Req() req: Request) {
+        console.log(req.ip);
         return {
             status: 'ok',
         };
