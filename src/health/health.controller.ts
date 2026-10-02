@@ -17,7 +17,12 @@ export class HealthController {
     ) { }
     @Get('live')
     live(@Req() req: Request) {
-        console.log(req.ip);
+        console.log({
+            ip: req.ip,
+            ips: req.ips,
+            forwarded: req.headers['x-forwarded-for'],
+            realIp: req.headers['x-real-ip'],
+        });
         return {
             status: 'ok',
         };
