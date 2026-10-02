@@ -43,6 +43,9 @@ import { PayoutModule } from 'payout/payout.module';
 import { AdminModule } from 'admin/admin.module';
 import { InvoiceModule } from './invoice/invoice.module';
 import { HealthModule } from 'health/health.module';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import { connection } from 'config/redis.config';
 
 
 @Module({
@@ -51,6 +54,15 @@ import { HealthModule } from 'health/health.module';
       isGlobal: true, // makes .env available everywhere
     }),
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60_000, // 1 minute
+          limit: 5, // 5 requests per minute
+        },
+      ],
+      storage: new ThrottlerStorageRedisService(connection)
+    }),
     CronModule,
     LoggerModule,
     PrismaModule,
@@ -103,6 +115,10 @@ import { HealthModule } from 'health/health.module';
     {
       provide: APP_GUARD,
       useClass: RolesGuard
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard
     }
   ]
 })

@@ -21,9 +21,9 @@ async function bootstrap() {
       transports: Object.values(createWinstonTransports()),
     }),
   });
-  app.getHttpAdapter().getInstance().set('trust proxy', true);
+  // app.getHttpAdapter().getInstancce().set('trust proxy', true);
 
-  // app.set('trust proxy', 1);
+  app.set('trust proxy', 1);
 
 
   const allowedOrigins = [
@@ -93,7 +93,7 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
 
   winstonLogger.info(`StudyNest is running on port ${port}`);
-  console.log(`🚀 StudyNest running on Railway port: ${port}`);
+  console.log(`🚀 StudyNest running on port: ${port}`);
 
 
 }
