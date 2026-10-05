@@ -57,6 +57,7 @@ import { connection } from 'config/redis.config';
     ThrottlerModule.forRoot({
       throttlers: [
         {
+          name: 'ip',
           ttl: 60_000, // 1 minute
           limit: 5, // 5 requests per minute
         },

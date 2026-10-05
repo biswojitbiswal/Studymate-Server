@@ -6,6 +6,7 @@ import { PaginationDto } from "common/dtos/pagination.dto";
 import { Public } from "common/decorator/public.decorator";
 import { OptionalJwtAuthGuard } from "common/guards/optionaljwt.guard";
 import { Roles } from "common/decorator/roles.decorator";
+import { ThrottlerGuard } from "@nestjs/throttler";
 
 
 @Controller({
@@ -16,7 +17,7 @@ export class WishlistController{
     constructor(private readonly wishlistService: WishlistService){}
 
 
-    @UseGuards(AuthGuard)
+    @UseGuards(AuthGuard, ThrottlerGuard)
     @Roles('STUDENT')
     @Get()
     async getMyFavorites(@GetCurrentUserId() userId: string, @Query() dto: PaginationDto){

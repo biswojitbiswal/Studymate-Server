@@ -4,6 +4,7 @@ import { BrowseClassFilterDto } from "./dtos/tuition-class.dto";
 import { Public } from "src/common/decorator/public.decorator";
 import { GetCurrentUserId } from "common/decorator/get-current-user-id.decorator";
 import { OptionalJwtAuthGuard } from "common/guards/optionaljwt.guard";
+import { UserThrottlerGuard } from "common/guards/user-throttler.guard";
 
 @Controller({
     path: "public/classes",
@@ -14,7 +15,7 @@ export class PublicClassController {
 
     // 7️⃣ Browse classes
     @Public()
-    @UseGuards(OptionalJwtAuthGuard)
+    @UseGuards(OptionalJwtAuthGuard, UserThrottlerGuard)
     @Get('browse')
     async browse(@Query() dto: BrowseClassFilterDto, @GetCurrentUserId() userId: string, @Req() req) {
         return await this.classservice.browse(dto, userId);
