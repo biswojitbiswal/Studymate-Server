@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { TuitionClassService } from "./tuition-class.service";
 import { RolesGuard } from "src/common/guards/roles.guard";
 import { Roles } from "src/common/decorator/roles.decorator";
@@ -53,7 +54,7 @@ export class TutorClassController {
     @Patch('publish/:classId')
     @Roles('TUTOR')
     async publish(
-        @Param('classId') classId: string,
+        @Param('classId', ParseMongoIdPipe) classId: string,
         @GetCurrentUserId() userId: string,
     ) {        
         return await this.classservice.publish(classId, userId);
@@ -64,7 +65,7 @@ export class TutorClassController {
     @Patch('archive/:classId')
     @Roles('TUTOR')
     async archive(
-        @Param('classId') classId: string,
+        @Param('classId', ParseMongoIdPipe) classId: string,
         @GetCurrentUserId() userId: string,
     ) {        
         return await this.classservice.archiveByTutor(classId, userId);
@@ -80,7 +81,7 @@ export class TutorClassController {
         { name: 'previewVdo', maxCount: 1 },
     ]))
     async update(
-        @Param('classId') classId: string,
+        @Param('classId', ParseMongoIdPipe) classId: string,
         @Body() dto: TutorUpdateTuitionClassDto,
         @GetCurrentUserId() userId: string,
         @UploadedFiles()
@@ -98,11 +99,10 @@ export class TutorClassController {
     @Get(':classId')
     @Roles('TUTOR', 'STUDENT', 'ADMIN')
     async getById(
-        @Param('classId') classId: string,
+        @Param('classId', ParseMongoIdPipe) classId: string,
         @GetCurrentUserId() userId: string,
     ) {
         return await this.classservice.getById(classId, userId);
     }
 }
-
 

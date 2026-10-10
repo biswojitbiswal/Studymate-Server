@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { TutorService } from "./tutor.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { RolesGuard } from "src/common/guards/roles.guard";
@@ -10,6 +11,7 @@ import { TutorApplyDto, TutorBrowseFilterDto, TutorProfileUpdateDto } from "./dt
 import { Public } from "common/decorator/public.decorator";
 import { AccountIntents, AllowTutorApplicant } from "common/decorator/account-access.decorator";
 import { SignupIntent } from "@prisma/client";
+import { Throttle } from "@nestjs/throttler";
 
 @Controller({
     path: "tutor",
@@ -34,6 +36,12 @@ export class TutorController {
 
     @Public()
     @Get('browse')
+    @Throttle({
+        ip: {
+            limit: 20,
+            ttl: 60_000,
+        },
+    })
     async browseTutors(
         @Query() dto: TutorBrowseFilterDto
     ) {
@@ -80,7 +88,7 @@ export class TutorController {
     @UseGuards(AuthGuard, RolesGuard)
     @Roles('ADMIN')
     @Patch('approved/:id')
-    async toggleApproved(@Param('id') id: string) {
+    async toggleApproved(@Param('id', ParseMongoIdPipe) id: string) {
         return await this.tutorService.toggleApproved(id)
     }
 
@@ -88,7 +96,7 @@ export class TutorController {
     @UseGuards(AuthGuard, RolesGuard)
     @Roles('ADMIN')
     @Patch('rejected/:id')
-    async toggleRejected(@Param('id') id: string) {
+    async toggleRejected(@Param('id', ParseMongoIdPipe) id: string) {
         return await this.tutorService.toggleRejected(id)
     }
 
@@ -103,7 +111,7 @@ export class TutorController {
     @UseGuards(AuthGuard, RolesGuard)
     @Roles('STUDENT', 'TUTOR', 'ADMIN')
     @Get(':id')
-    async getById(@Param('id') id: string) {
+    async getById(@Param('id', ParseMongoIdPipe) id: string) {
         return await this.tutorService.getById(id)
     }
 }

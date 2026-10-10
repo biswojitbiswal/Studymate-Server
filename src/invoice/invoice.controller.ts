@@ -1,4 +1,5 @@
 import { Controller, Get, Param, Post, Res } from '@nestjs/common';
+import { ParseMongoIdPipe } from 'common/pipes/parse-mongo-id.pipe';
 import { Response } from 'express';
 import { Roles } from 'src/common/decorator/roles.decorator';
 import { GetCurrentUserId } from 'src/common/decorator/get-current-user-id.decorator';
@@ -11,7 +12,7 @@ export class InvoiceController {
 
   @Post('order/:orderId/prepare')
   prepare(
-    @Param('orderId') orderId: string,
+    @Param('orderId', ParseMongoIdPipe) orderId: string,
     @GetCurrentUserId() userId: string,
   ) {
     return this.invoiceService.prepareForPaidOrder(orderId, userId);
@@ -19,7 +20,7 @@ export class InvoiceController {
 
   @Get('order/:orderId')
   getStatus(
-    @Param('orderId') orderId: string,
+    @Param('orderId', ParseMongoIdPipe) orderId: string,
     @GetCurrentUserId() userId: string,
   ) {
     return this.invoiceService.getForOrder(orderId, userId);
@@ -27,7 +28,7 @@ export class InvoiceController {
 
   @Get('order/:orderId/download')
   async download(
-    @Param('orderId') orderId: string,
+    @Param('orderId', ParseMongoIdPipe) orderId: string,
     @GetCurrentUserId() userId: string,
     @Res() response: Response,
   ) {

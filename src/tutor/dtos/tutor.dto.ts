@@ -27,7 +27,7 @@ export class TutorApplyDto {
   @Transform(({ value }) =>
     Array.isArray(value) ? value.map(String) : [String(value)]
   )
-  @IsString({ each: true })
+  @IsMongoId({ each: true })
   subjectIds: string[];
 
   @IsArray()
@@ -35,7 +35,7 @@ export class TutorApplyDto {
   @Transform(({ value }) =>
     Array.isArray(value) ? value.map(String) : [String(value)]
   )
-  @IsString({ each: true })
+  @IsMongoId({ each: true })
   levelIds: string[];
 
   @IsOptional()
@@ -121,7 +121,7 @@ export class TutorProfileUpdateDto {
   @Transform(({ value }) =>
     Array.isArray(value) ? value.map((v) => String(v)) : []
   )
-  @IsString({ each: true })
+  @IsMongoId({ each: true })
   subjectIds?: string[];
 
   @IsOptional()
@@ -129,7 +129,7 @@ export class TutorProfileUpdateDto {
   @Transform(({ value }) =>
     Array.isArray(value) ? value.map((v) => String(v)) : []
   )
-  @IsString({ each: true })
+  @IsMongoId({ each: true })
   levelIds?: string[];
 }
 

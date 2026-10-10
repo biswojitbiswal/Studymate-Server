@@ -69,12 +69,15 @@ export class WishlistService {
 
             const skip = (page - 1) * limit;
 
+            
+
             const where: any = {
                 userId,
                 ...(search && {
                     OR: [
                         {
                             product: {
+                                status: 'PUBLISHED',
                                 title: {
                                     contains: search,
                                     mode: "insensitive",

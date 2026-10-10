@@ -67,6 +67,6 @@ export class ResourceFilterDto {
   search?: string;
 
   @IsOptional()
-  @IsString()
+  @IsMongoId()
   classId?: string
 }

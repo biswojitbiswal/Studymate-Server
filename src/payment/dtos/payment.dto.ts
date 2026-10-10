@@ -1,7 +1,7 @@
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsMongoId, IsNotEmpty, IsString } from "class-validator";
 
 export class PaymentVerifyDto{
-    @IsString()
+    @IsMongoId()
     @IsNotEmpty()
     orderId: string
 

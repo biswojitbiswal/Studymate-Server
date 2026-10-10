@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { ResourceService } from "./resources.service";
 import { Roles } from "common/decorator/roles.decorator";
 import { FileInterceptor } from "@nestjs/platform-express";
@@ -40,7 +41,7 @@ export class ResourceController {
 
     @Roles('TUTOR')
     @Get('class/:classId')
-    async getByClass(@Param('classId') classId: string, @Query() dto: PaginationDto, @GetCurrentUserId() userId: string) {
+    async getByClass(@Param('classId', ParseMongoIdPipe) classId: string, @Query() dto: PaginationDto, @GetCurrentUserId() userId: string) {
         return await this.resourceService.getByClass(classId, dto, userId);
     }
 
@@ -49,7 +50,7 @@ export class ResourceController {
     @Patch(':id')
     @UseInterceptors(FileInterceptor('file'))
     async update(
-        @Param('id') id: string, 
+        @Param('id', ParseMongoIdPipe) id: string,
         @Body() dto: UpdateResourceDto,
         @GetCurrentUserId() userId: string) {
         return await this.resourceService.update(id, dto, userId);
@@ -58,7 +59,7 @@ export class ResourceController {
 
     @Roles('TUTOR')
     @Delete(':id')
-    async delete(@Param('id') id: string, @GetCurrentUserId() userId: string) {
+    async delete(@Param('id', ParseMongoIdPipe) id: string, @GetCurrentUserId() userId: string) {
         return await this.resourceService.delete(id, userId);
     }
 }

@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { TaskService } from "./task.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { RolesGuard } from "src/common/guards/roles.guard";
@@ -34,7 +35,7 @@ export class TaskController{
     @UseGuards(AuthGuard, RolesGuard)
     @Patch('status/:id')
     @Roles('STUDENT')
-    async markAsDone(@Param('id') id: string){
+    async markAsDone(@Param('id', ParseMongoIdPipe) id: string){
         return await this.task.markAsDone(id)
     }
 
@@ -42,7 +43,7 @@ export class TaskController{
     @UseGuards(AuthGuard, RolesGuard)
     @Get(':id')
     @Roles('STUDENT')
-    async getById(@Param('id') id: string){
+    async getById(@Param('id', ParseMongoIdPipe) id: string){
         return await this.task.getById(id)
     }
 
@@ -50,7 +51,7 @@ export class TaskController{
     @UseGuards(AuthGuard, RolesGuard)
     @Patch(':id')
     @Roles('STUDENT')
-    async update(@Param('id') id: string, @Body() dto: UpdateTaskDto){
+    async update(@Param('id', ParseMongoIdPipe) id: string, @Body() dto: UpdateTaskDto){
         return await this.task.update(id, dto)
     }
 
@@ -58,7 +59,7 @@ export class TaskController{
     @UseGuards(AuthGuard, RolesGuard)
     @Delete(':id')
     @Roles('STUDENT')
-    async delete(@Param('id') id: string){
+    async delete(@Param('id', ParseMongoIdPipe) id: string){
         return await this.task.delete(id)
     }
 }

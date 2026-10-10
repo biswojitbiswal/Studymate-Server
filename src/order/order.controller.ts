@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { OrderService } from "./order.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { RolesGuard } from "src/common/guards/roles.guard";
@@ -41,7 +42,7 @@ export class OrderController{
     @UseGuards(AuthGuard)
     @Roles('STUDENT')
     @Get("checkout/:classId")
-    async checkout(@GetCurrentUserId() userId: string, @Param('classId') classId: string){
+    async checkout(@GetCurrentUserId() userId: string, @Param('classId', ParseMongoIdPipe) classId: string){
         return await this.orderService.checkout(classId, userId);
     }
 
@@ -49,7 +50,7 @@ export class OrderController{
     @UseGuards(AuthGuard, RolesGuard)
     @Roles('ADMIN')
     @Get("admin/:orderId")
-    async getAdminOrderById(@Param('orderId') orderId: string){
+    async getAdminOrderById(@Param('orderId', ParseMongoIdPipe) orderId: string){
         return await this.orderService.getAdminById(orderId)
     }
 
@@ -57,7 +58,7 @@ export class OrderController{
     @UseGuards(AuthGuard)
     @Roles('STUDENT')
     @Get(":orderId/status")
-    async getStatus(@Param('orderId') orderId: string, @GetCurrentUserId() userId: string){
+    async getStatus(@Param('orderId', ParseMongoIdPipe) orderId: string, @GetCurrentUserId() userId: string){
         return await this.orderService.getStatus(orderId, userId)
     }
 
@@ -65,7 +66,7 @@ export class OrderController{
     @UseGuards(AuthGuard)
     @Roles('STUDENT')
     @Get(":orderId")
-    async getById(@Param('orderId') orderId: string, @GetCurrentUserId() userId: string){
+    async getById(@Param('orderId', ParseMongoIdPipe) orderId: string, @GetCurrentUserId() userId: string){
         return await this.orderService.getById(orderId, userId)
     }
 }

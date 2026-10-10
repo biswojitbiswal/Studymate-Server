@@ -68,3 +68,12 @@ Nest calls them in order:
 3. AllExceptions filter
 
 "start:dev": "nest start --watch --webpack"
+
+
+
+
+-Endpoint-specific rate limits — login, registration, password reset, OTP, messaging.
+-Input validation — reject malformed MongoDB IDs before database queries.
+-Negative caching — temporarily cache valid-but-nonexistent resource IDs.
+-404 abuse detection — detect clients repeatedly probing nonexistent resources.
+-WebSocket rate limits and security logging.

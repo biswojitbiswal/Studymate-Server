@@ -46,6 +46,7 @@ import { HealthModule } from 'health/health.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { connection } from 'config/redis.config';
+import { UserThrottlerGuard } from 'common/guards/user-throttler.guard';
 
 
 @Module({
@@ -57,8 +58,9 @@ import { connection } from 'config/redis.config';
     ThrottlerModule.forRoot({
       throttlers: [
         {
+          name: 'ip',
           ttl: 60_000, // 1 minute
-          limit: 5, // 5 requests per minute
+          limit: 10, // 20 requests per minute
         },
       ],
       storage: new ThrottlerStorageRedisService(connection)
@@ -119,7 +121,11 @@ import { connection } from 'config/redis.config';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard
-    }
+    },
+    {
+      provide: APP_GUARD,
+      useClass: UserThrottlerGuard,
+    },
   ]
 })
 export class AppModule { }

@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsNumber,
   IsInt,
+  IsMongoId,
   IsDateString,
   Min,
   IsNotEmpty,
@@ -34,7 +35,7 @@ export class CreateCouponDto {
   appliesTo: PriceOn;
 
   @IsOptional()
-  @IsString()
+  @IsMongoId()
   classId?: string;
 
   @IsOptional()
@@ -76,7 +77,7 @@ export class UpdateCouponDto extends PartialType(CreateCouponDto) { }
 
 
 export class CouponFilterDto {
-  @IsString()
+  @IsMongoId()
   @IsNotEmpty()
   productId: string
 
@@ -91,7 +92,7 @@ export class CouponValidateDto {
   @IsNotEmpty()
   couponCode: string
 
-  @IsString()
+  @IsMongoId()
   @IsNotEmpty()
   productId: string
 
@@ -99,5 +100,3 @@ export class CouponValidateDto {
   @IsEnum(PriceOn)
   itemType: PriceOn
 }
-
-

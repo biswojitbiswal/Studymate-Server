@@ -1,9 +1,9 @@
 import { Type } from "class-transformer";
-import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min } from "class-validator";
+import { IsEnum, IsInt, IsMongoId, IsNotEmpty, IsOptional, IsString, Min } from "class-validator";
 import { Status } from "common/enums/tuition-class.enum";
 
 export class ReviewDto {
-    @IsString()
+    @IsMongoId()
     classId: string
 
     @IsInt()
@@ -34,11 +34,11 @@ export class ReviewFilterDto {
     search?: string;
 
     @IsOptional()
-    @IsString()
+    @IsMongoId()
     classId?: string
 
     @IsOptional()
-    @IsString()
+    @IsMongoId()
     tutorId?: string
 }
 

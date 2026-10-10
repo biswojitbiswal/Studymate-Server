@@ -1,8 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { AssignmentService } from "./assignment.service";
 import { Roles } from "common/decorator/roles.decorator";
-import { AssignmentDto, AssignmentFilterDto, AssignmentStatusDto, StudentAssignmentFilterDto } from "./dtos/assignment.dto";
+import { AssignmentDto, AssignmentFilterDto, AssignmentStatusDto, StudentAssignmentFilterDto, UpdateAssignmentDto } from "./dtos/assignment.dto";
 import { GetCurrentUserId } from "common/decorator/get-current-user-id.decorator";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 
 @Controller({
     path: 'assignments',
@@ -21,7 +22,7 @@ export class AssignmentController {
 
     @Roles('TUTOR')
     @Get('class/:classId')
-    async getByClass(@Param('classId') classId: string, @Query() dto: AssignmentFilterDto) {
+    async getByClass(@Param('classId', ParseMongoIdPipe) classId: string, @Query() dto: AssignmentFilterDto) {
         return await this.assignmentService.getByClass(classId, dto);
     }
 
@@ -38,21 +39,21 @@ export class AssignmentController {
 
     @Roles('STUDENT')
     @Patch(':id/status')
-    async updateStatus(@Param('id') id: string, @Body() dto: AssignmentStatusDto, @GetCurrentUserId() userId: string) {
+    async updateStatus(@Param('id', ParseMongoIdPipe) id: string, @Body() dto: AssignmentStatusDto, @GetCurrentUserId() userId: string) {
         return await this.assignmentService.updateStatus(id, dto, userId);
     }
 
 
     @Roles('TUTOR')
     @Patch(':id')
-    async update(@Param('id') id: string, @Body() dto: Partial<AssignmentDto>, @GetCurrentUserId() userId: string) {
+    async update(@Param('id', ParseMongoIdPipe) id: string, @Body() dto: UpdateAssignmentDto, @GetCurrentUserId() userId: string) {
         return await this.assignmentService.update(id, dto, userId);
     }
 
 
     @Roles('TUTOR')
     @Delete(':id')
-    async delete(@Param('id') id: string, @GetCurrentUserId() userId: string) {
+    async delete(@Param('id', ParseMongoIdPipe) id: string, @GetCurrentUserId() userId: string) {
         return await this.assignmentService.delete(id, userId);
     }
 
@@ -60,7 +61,7 @@ export class AssignmentController {
     @Roles('TUTOR')
     @Get(':id')
     async getDetails(
-        @Param('id') id: string,
+        @Param('id', ParseMongoIdPipe) id: string,
         @GetCurrentUserId() userId: string
     ) {
         return this.assignmentService.getDetails(id, userId);

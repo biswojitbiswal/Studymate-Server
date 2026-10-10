@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Query, UseGuards } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { TuitionClassService } from "./tuition-class.service";
 import { AdminTuitionClassFilter, AdminUpdateTuitionClassDto } from "./dtos/tuition-class.dto";
 import { GetCurrentUserId } from "src/common/decorator/get-current-user-id.decorator";
@@ -30,7 +31,7 @@ export class AdminClassController {
     @Roles('ADMIN')
     @Patch('archive/:classId')
     async archive(
-        @Param('classId') classId: string,
+        @Param('classId', ParseMongoIdPipe) classId: string,
         @GetCurrentUserId() adminId: string,
     ) {
         return await this.classservice.archiveByAdmin(classId, adminId);

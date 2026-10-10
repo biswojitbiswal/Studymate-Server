@@ -24,18 +24,18 @@ export class CreateTuitionClassDto {
     // Academic
     // ─────────────────────────
 
-    @IsString()
+    @IsMongoId()
     subjectId: string;
 
-    @IsString()
+    @IsMongoId()
     levelId: string;
 
     @IsOptional()
-    @IsString()
+    @IsMongoId()
     boardId?: string;
 
     @IsOptional()
-    @IsString()
+    @IsMongoId()
     languageId?: string;
 
     // ─────────────────────────
@@ -295,7 +295,7 @@ export class TutorTuitionClassFilter {
 
 export class AdminTuitionClassFilter {
     @IsOptional()
-    @IsString()
+    @IsMongoId()
     tutorId?: string
 
     @IsOptional()

@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { SessionService } from "./session.service";
 import { RolesGuard } from "src/common/guards/roles.guard";
 import { Roles } from "src/common/decorator/roles.decorator";
@@ -32,7 +33,7 @@ export class SessionController {
     @UseGuards(AuthGuard, RolesGuard)
     @Patch('cancel/:sessionId')
     @Roles('STUDENT', 'TUTOR')
-    async cancelSession(@Param('sessionId') sessionId: string, @GetCurrentUserId() userId: string) {
+    async cancelSession(@Param('sessionId', ParseMongoIdPipe) sessionId: string, @GetCurrentUserId() userId: string) {
         return await this.session.cancel(sessionId, userId);
     }
 
@@ -40,14 +41,14 @@ export class SessionController {
     @UseGuards(AuthGuard, RolesGuard)
     @Patch('approve/:sessionId')
     @Roles('TUTOR')
-    async approveSession(@Param('sessionId') sessionId: string, @GetCurrentUserId() userId: string) {
+    async approveSession(@Param('sessionId', ParseMongoIdPipe) sessionId: string, @GetCurrentUserId() userId: string) {
         return await this.session.approve(sessionId, userId);
     }
 
     @UseGuards(AuthGuard, RolesGuard)
     @Patch('reject/:sessionId')
     @Roles('TUTOR')
-    async rejectSession(@Param('sessionId') sessionId: string, @GetCurrentUserId() userId: string) {
+    async rejectSession(@Param('sessionId', ParseMongoIdPipe) sessionId: string, @GetCurrentUserId() userId: string) {
         return await this.session.reject(sessionId, userId);
     }
 
@@ -56,7 +57,7 @@ export class SessionController {
     @Patch('reschedule/:sessionId')
     @Roles('STUDENT', 'TUTOR')
     async rescheduleSession(
-        @Param('sessionId') sessionId: string,
+        @Param('sessionId', ParseMongoIdPipe) sessionId: string,
         @Body() dto: RescheduleSessionDto,
         @GetCurrentUserId() userId: string,
     ) {
@@ -90,7 +91,7 @@ export class SessionController {
     @UseGuards(AuthGuard, RolesGuard)
     @Get(':sessionId/join')
     @Roles('TUTOR', 'STUDENT')
-    async getMeetingLink(@Param('sessionId') sessionId: string, @GetCurrentUserId() userId: string) {
+    async getMeetingLink(@Param('sessionId', ParseMongoIdPipe) sessionId: string, @GetCurrentUserId() userId: string) {
         return await this.session.getMeetingLink(sessionId, userId)
     }
 }
