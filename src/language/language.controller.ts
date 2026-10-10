@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { LanguageService } from "./language.service";
 import { RolesGuard } from "src/common/guards/roles.guard";
 import { Roles } from "src/common/decorator/roles.decorator";
@@ -55,7 +56,7 @@ export class LanguageController {
     @Get(':id')
     @Roles('ADMIN')
     async getById(
-        @Param('id') id: string,
+        @Param('id', ParseMongoIdPipe) id: string,
     ) {
         return await this.language.getById(id)
     }
@@ -67,7 +68,7 @@ export class LanguageController {
     @Roles('ADMIN')
     @UseInterceptors(FileInterceptor('icon'))
     async update(
-        @Param('id') id: string,
+        @Param('id', ParseMongoIdPipe) id: string,
         @Body() dto: UpdateLanguageDto,
         @UploadedFile() file?: Express.Multer.File,
     ) {
@@ -80,7 +81,7 @@ export class LanguageController {
     @Delete(':id')
     @Roles('ADMIN')
     async delete(
-        @Param('id') id: string,
+        @Param('id', ParseMongoIdPipe) id: string,
     ) {
         return await this.language.delete(id)
     }

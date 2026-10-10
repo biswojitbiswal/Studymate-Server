@@ -1,9 +1,9 @@
 import { Type } from "class-transformer";
-import { IsArray, IsEnum, IsNotEmpty, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsEnum, IsMongoId, IsNotEmpty, ValidateNested } from "class-validator";
 import { AttendanceStatus } from "src/common/enums/attendance.enum";
 
 export class StudentAttendanceDto {
-    @IsString()
+    @IsMongoId()
     @IsNotEmpty()
     studentId: string;
 

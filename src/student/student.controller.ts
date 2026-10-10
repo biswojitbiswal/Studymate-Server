@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { StudentService } from "./student.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { GetCurrentUserId } from "src/common/decorator/get-current-user-id.decorator";
@@ -45,8 +46,7 @@ export class StudentController{
     @UseGuards(AuthGuard, RolesGuard)
     @Roles('STUDENT','TUTOR','ADMIN')
     @Get(':id')
-    async getById(@Param('id') id: string){
+    async getById(@Param('id', ParseMongoIdPipe) id: string){
         return await this.studentService.getById(id)
     }
 }
-

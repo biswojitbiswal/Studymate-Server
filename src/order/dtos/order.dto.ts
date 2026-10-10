@@ -1,10 +1,10 @@
 import { PriceOn } from "@prisma/client"
 import { Transform, Type } from "class-transformer"
-import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min } from "class-validator"
+import { IsEnum, IsInt, IsMongoId, IsNotEmpty, IsOptional, IsString, Min } from "class-validator"
 import { OrderStatus, ProductType } from "common/enums/order.enum"
 
 export class CreateOrderDto {
-    @IsString()
+    @IsMongoId()
     @IsNotEmpty()
     productId: string
 

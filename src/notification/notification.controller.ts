@@ -1,4 +1,5 @@
 import { Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { NotificationService } from "./notification.service";
 import { GetCurrentUserId } from "common/decorator/get-current-user-id.decorator";
 
@@ -28,7 +29,7 @@ export class NotificationController{
 
 
     @Patch(':id/mark-read')
-    async markAsRead(@Param('id') id: string){
+    async markAsRead(@Param('id', ParseMongoIdPipe) id: string){
         console.log(id, "----------");
         
         return await this.notificationService.markAsRead(id);

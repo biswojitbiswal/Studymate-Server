@@ -1,9 +1,10 @@
 import { TaskStatus } from "@prisma/client";
+import { PartialType } from "@nestjs/mapped-types";
 import { Type } from "class-transformer";
-import { IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min } from "class-validator";
+import { IsDateString, IsEnum, IsInt, IsMongoId, IsNotEmpty, IsOptional, IsString, Min } from "class-validator";
 
 export class AssignmentDto {
-    @IsString()
+    @IsMongoId()
     classId: string
 
     @IsString()
@@ -20,6 +21,8 @@ export class AssignmentDto {
     @IsOptional()
     dueDate?: string
 }
+
+export class UpdateAssignmentDto extends PartialType(AssignmentDto) {}
 
 
 export class AssignmentStatusDto {
@@ -103,7 +106,7 @@ export class StudentAssignmentFilterDto {
     search?: string;
 
     @IsOptional()
-    @IsString()
+    @IsMongoId()
     classId?: string
 
     @IsOptional()

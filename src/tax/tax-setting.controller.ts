@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { TaxSettingService } from "./tax-setting.service";
 import { CreateTaxSettingDto, UpdateTaxSettingDto } from "./dtos/tax-setting.dto";
 import { RolesGuard } from "src/common/guards/roles.guard";
@@ -22,7 +23,7 @@ export class TaxSettingController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles("ADMIN")
   @Get(':id')
-  async get(@Param('id') id: string) {
+  async get(@Param('id', ParseMongoIdPipe) id: string) {
     return await this.taxService.get(id);
   }
 
@@ -40,7 +41,7 @@ export class TaxSettingController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles("ADMIN")
   @Delete(':id')
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id', ParseMongoIdPipe) id: string) {
     return await this.taxService.delete(id);
   }
 
@@ -49,7 +50,7 @@ export class TaxSettingController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles("ADMIN")
   @Patch(':id')
-  async update(@Body() dto: UpdateTaxSettingDto, @Param('id') id: string) {
+  async update(@Body() dto: UpdateTaxSettingDto, @Param('id', ParseMongoIdPipe) id: string) {
     return await this.taxService.update(dto, id);
   }
 }

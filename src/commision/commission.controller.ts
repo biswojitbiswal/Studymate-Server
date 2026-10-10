@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { CommissionService } from "./commission.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { RolesGuard } from "src/common/guards/roles.guard";
@@ -22,7 +23,7 @@ export class CommissionController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles("ADMIN")
   @Get(':id')
-  async get(@Param('id') id: string) {
+  async get(@Param('id', ParseMongoIdPipe) id: string) {
     return await this.commissionService.get(id);
   }
 
@@ -39,7 +40,7 @@ export class CommissionController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles("ADMIN")
   @Delete(':id')
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id', ParseMongoIdPipe) id: string) {
     return await this.commissionService.delete(id);
   }
 
@@ -48,7 +49,7 @@ export class CommissionController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles("ADMIN")
   @Patch(':id')
-  async update(@Body() dto: UpdateCommissionDto, @Param('id') id: string) {
+  async update(@Body() dto: UpdateCommissionDto, @Param('id', ParseMongoIdPipe) id: string) {
     return await this.commissionService.update(dto, id);
   }
 }

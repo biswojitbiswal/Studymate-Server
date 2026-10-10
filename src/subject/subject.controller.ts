@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { SubjectService } from "./subject.service";
 import { RolesGuard } from "src/common/guards/roles.guard";
 import { Roles } from "src/common/decorator/roles.decorator";
@@ -56,7 +57,7 @@ export class SubjectController {
     @Get(':id')
     @Roles('ADMIN')
     async getById(
-        @Param('id') id: string,
+        @Param('id', ParseMongoIdPipe) id: string,
     ) {
         return await this.subject.getById(id)
     }
@@ -68,7 +69,7 @@ export class SubjectController {
     @Roles('ADMIN')
     @UseInterceptors(FileInterceptor('icon'))
     async update(
-        @Param('id') id: string,
+        @Param('id', ParseMongoIdPipe) id: string,
         @Body() dto: UpdateSubjectDto,
         @UploadedFile() file?: Express.Multer.File,
     ) {
@@ -81,7 +82,7 @@ export class SubjectController {
     @Delete(':id')
     @Roles('ADMIN')
     async delete(
-        @Param('id') id: string,
+        @Param('id', ParseMongoIdPipe) id: string,
     ) {
         return await this.subject.delete(id)
     }

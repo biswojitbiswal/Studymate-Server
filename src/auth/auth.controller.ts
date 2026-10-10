@@ -14,6 +14,7 @@ import {
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
+import { ParseMongoIdPipe } from 'common/pipes/parse-mongo-id.pipe';
 import type { Response, Request, CookieOptions } from 'express';
 import { AuthService } from './auth.service';
 import { Public } from 'src/common/decorator/public.decorator';
@@ -226,7 +227,7 @@ export class AuthController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Patch('toggle/:userId')
-  async toggle(@Param('userId') userId: string) {
+  async toggle(@Param('userId', ParseMongoIdPipe) userId: string) {
     return await this.authService.toggle(userId);
   }
 
@@ -235,7 +236,7 @@ export class AuthController {
   @UseInterceptors(FileInterceptor('avatar'))
   @Patch(':userId')
   async update(
-    @Param('userId') userId: string,
+    @Param('userId', ParseMongoIdPipe) userId: string,
     @Body() dto: UpdateProfileDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {

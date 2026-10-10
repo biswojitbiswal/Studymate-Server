@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { TutorAvailibilityService } from "./tutor-availibility.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { RolesGuard } from "src/common/guards/roles.guard";
@@ -80,7 +81,7 @@ export class TutorScheduleController{
     @UseGuards(AuthGuard, RolesGuard)
     @Patch('availibility/toggle/:id')
     @Roles('TUTOR')
-    async statusToggle(@Param('id') id: string, @GetCurrentUserId() userId: string){
+    async statusToggle(@Param('id', ParseMongoIdPipe) id: string, @GetCurrentUserId() userId: string){
         return await this.availibility.statusToggle(id, userId)
     }
 
@@ -88,7 +89,7 @@ export class TutorScheduleController{
     @UseGuards(AuthGuard, RolesGuard)
     @Delete('availibility/:id')
     @Roles('TUTOR')
-    async delete(@Param('id') id: string, @GetCurrentUserId() userId: string){
+    async delete(@Param('id', ParseMongoIdPipe) id: string, @GetCurrentUserId() userId: string){
         return await this.availibility.delete(id, userId)
     }
 
@@ -96,7 +97,7 @@ export class TutorScheduleController{
     @UseGuards(AuthGuard, RolesGuard)
     @Delete('timeoff/:id')
     @Roles('TUTOR')
-    async deleteTimeoff(@Param('id') id: string, @GetCurrentUserId() userId: string){
+    async deleteTimeoff(@Param('id', ParseMongoIdPipe) id: string, @GetCurrentUserId() userId: string){
         return await this.timeoff.delete(id, userId)
     }
 
@@ -104,7 +105,7 @@ export class TutorScheduleController{
     @UseGuards(AuthGuard, RolesGuard)
     @Delete('leave/:id')
     @Roles('TUTOR')
-    async deleteLeave(@Param('id') id: string, @GetCurrentUserId() userId: string){
+    async deleteLeave(@Param('id', ParseMongoIdPipe) id: string, @GetCurrentUserId() userId: string){
         return await this.leave.delete(id, userId)
     }
 
@@ -112,7 +113,7 @@ export class TutorScheduleController{
     @UseGuards(AuthGuard, RolesGuard)
     @Patch('availibility/:id')
     @Roles('TUTOR')
-    async update(@Body() dto: UpdateTutorAvailabilityDto, @Param('id') id: string, @GetCurrentUserId() userId: string){
+    async update(@Body() dto: UpdateTutorAvailabilityDto, @Param('id', ParseMongoIdPipe) id: string, @GetCurrentUserId() userId: string){
         return await this.availibility.update(id, dto, userId)
     }
 
@@ -120,7 +121,7 @@ export class TutorScheduleController{
     @UseGuards(AuthGuard, RolesGuard)
     @Get('tutors/:tutorId/availibility')
     @Roles('TUTOR', 'STUDENT')
-    async getFreeAvailibility(@Param('tutorId') tutorId: string, @Query() dto: TutorAvailabilityForDayDto){
+    async getFreeAvailibility(@Param('tutorId', ParseMongoIdPipe) tutorId: string, @Query() dto: TutorAvailabilityForDayDto){
         return await this.availibility.getFreeAvailibility(tutorId, dto.date)
     }
 }

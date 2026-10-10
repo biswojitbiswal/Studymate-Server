@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { BoardService } from "./board.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { RolesGuard } from "src/common/guards/roles.guard";
@@ -56,7 +57,7 @@ export class BoardController {
     @Get(':id')
     @Roles('ADMIN')
     async getById(
-        @Param('id') id: string,
+        @Param('id', ParseMongoIdPipe) id: string,
     ) {
         return await this.board.getById(id)
     }
@@ -68,7 +69,7 @@ export class BoardController {
     @Roles('ADMIN')
     @UseInterceptors(FileInterceptor('icon'))
     async update(
-        @Param('id') id: string,
+        @Param('id', ParseMongoIdPipe) id: string,
         @Body() dto: UpdateBoardDto,
         @UploadedFile() file?: Express.Multer.File,
     ) {
@@ -81,7 +82,7 @@ export class BoardController {
     @Delete(':id')
     @Roles('ADMIN')
     async delete(
-        @Param('id') id: string,
+        @Param('id', ParseMongoIdPipe) id: string,
     ) {
         return await this.board.delete(id)
     }

@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { ReviewService } from "./review.service";
 import { AuthGuard } from "common/guards/auth.guard";
 import { RolesGuard } from "common/guards/roles.guard";
@@ -41,7 +42,7 @@ export class ReviewController{
     @UseGuards(AuthGuard)
     @Roles('STUDENT')
     @Get(':classId')
-    async getByStudent(@Param('classId') classId: string, @GetCurrentUserId() userId: string){
+    async getByStudent(@Param('classId', ParseMongoIdPipe) classId: string, @GetCurrentUserId() userId: string){
         return await this.reviewService.getByStudent(classId, userId)
     }
 
@@ -49,7 +50,7 @@ export class ReviewController{
     @UseGuards(AuthGuard, RolesGuard)
     @Roles('ADMIN')
     @Patch(':id/status')
-    async statusUpdate(@Param('id') id: string, @Body() dto: ReviewStatusDto){
+    async statusUpdate(@Param('id', ParseMongoIdPipe) id: string, @Body() dto: ReviewStatusDto){
         return await this.reviewService.statusUpdate(id, dto)
     }
 }

@@ -26,7 +26,7 @@ export class CreatePrivateSessionDto {
 
 export class GetClassSessionsDto {
   @IsNotEmpty()
-  @IsString()
+  @IsMongoId()
   classId: string
   // ─────────────────────────
   // Pagination
@@ -126,6 +126,6 @@ export class CreateGroupDboutSessionDto {
 
 export class UpcomingSessionDto{
   @IsOptional()
-  @IsString()
+  @IsMongoId()
   classId: string
 }

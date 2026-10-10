@@ -6,6 +6,7 @@ import { AuthGuard } from "src/common/guards/auth.guard";
 import { AttendanceDto } from "./dtos/attendance.dto";
 import { GetCurrentUserId } from "src/common/decorator/get-current-user-id.decorator";
 import { PaginationDto } from "src/common/dtos/pagination.dto";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 
 @Controller({
     path: 'attendance',
@@ -27,7 +28,7 @@ export class AttendanceController {
     @Roles('STUDENT')
     @Get('classes/:classId/me')
     async getMyClassAttendance(
-        @Param('classId') classId: string,
+        @Param('classId', ParseMongoIdPipe) classId: string,
         @Query() dto: PaginationDto,
         @GetCurrentUserId() userId: string,
     ) {
@@ -40,7 +41,7 @@ export class AttendanceController {
     @UseGuards(AuthGuard, RolesGuard)
     @Roles('TUTOR')
     @Get('mark-all-present/:sessionId')
-    async markAllPresent(@Param('sessionId') sessionId: string, @GetCurrentUserId() userId: string) {
+    async markAllPresent(@Param('sessionId', ParseMongoIdPipe) sessionId: string, @GetCurrentUserId() userId: string) {
         return this.attendance.markAllPresent(sessionId, userId);
     }
 
@@ -48,7 +49,7 @@ export class AttendanceController {
     @UseGuards(AuthGuard, RolesGuard)
     @Roles('TUTOR')
     @Get('sessions/:sessionId')
-    async getSessionAttendance(@Param('sessionId') sessionId: string, @Query() dto: PaginationDto) {
+    async getSessionAttendance(@Param('sessionId', ParseMongoIdPipe) sessionId: string, @Query() dto: PaginationDto) {
         return this.attendance.getSessionAttendance(sessionId, dto);
     }
 
@@ -57,7 +58,7 @@ export class AttendanceController {
     @Roles('TUTOR')
     @Post('sessions/:sessionId')
     async markAttendanceBulk(
-        @Param('sessionId') sessionId: string,
+        @Param('sessionId', ParseMongoIdPipe) sessionId: string,
         @Body() dto: AttendanceDto,
         @GetCurrentUserId() userId: string
     ) {
@@ -69,7 +70,7 @@ export class AttendanceController {
     @Roles('TUTOR')
     @Patch(':id')
     async updateSingleAttendance(
-        @Param('id') id: string,
+        @Param('id', ParseMongoIdPipe) id: string,
         @GetCurrentUserId() userId: string,
     ) {
         return this.attendance.updateSingleAttendance(id, userId);

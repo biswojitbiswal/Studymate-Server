@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 import { ChatService } from "./chat.service";
 import { RolesGuard } from "common/guards/roles.guard";
 import { Roles } from "common/decorator/roles.decorator";
@@ -62,28 +63,28 @@ export class ChatController {
 
     @UseGuards(AuthGuard)
     @Delete("messages/:id/delete-for-me")
-    async deleteForMe(@Param("id") id: string, @GetCurrentUserId() userId: string) {
+    async deleteForMe(@Param("id", ParseMongoIdPipe) id: string, @GetCurrentUserId() userId: string) {
         return await this.chat.deleteForMe(id, userId);
     }
 
 
     @UseGuards(AuthGuard)
     @Delete("messages/:id/delete-for-everyone")
-    async deleteForEveryone(@Param("id") id: string, @GetCurrentUserId() userId: string) {
+    async deleteForEveryone(@Param("id", ParseMongoIdPipe) id: string, @GetCurrentUserId() userId: string) {
         return await this.chat.deleteForEveryone(id, userId);
     }
 
 
     @UseGuards(AuthGuard)
     @Post("messages/:id/toggle-pin")
-    async togglePin(@Param("id") id: string, @GetCurrentUserId() userId: string) {
+    async togglePin(@Param("id", ParseMongoIdPipe) id: string, @GetCurrentUserId() userId: string) {
         return await this.chat.togglePinMessage(id, userId);
     }
 
 
     @UseGuards(AuthGuard)
     @Post("conversations/:id/read")
-    markRead(@Param("id") id: string, @GetCurrentUserId() userId: string) {
+    markRead(@Param("id", ParseMongoIdPipe) id: string, @GetCurrentUserId() userId: string) {
         return this.chat.markConversationRead(id, userId);
     }
 }

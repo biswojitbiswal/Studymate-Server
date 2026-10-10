@@ -7,6 +7,7 @@ import { Public } from "common/decorator/public.decorator";
 import { OptionalJwtAuthGuard } from "common/guards/optionaljwt.guard";
 import { Roles } from "common/decorator/roles.decorator";
 import { ThrottlerGuard } from "@nestjs/throttler";
+import { ParseMongoIdPipe } from "common/pipes/parse-mongo-id.pipe";
 
 
 @Controller({
@@ -31,7 +32,7 @@ export class WishlistController{
     @UseGuards(AuthGuard)
     @Roles('STUDENT')
     @Post(':id/toggle')
-    async toggle(@Param('id') id: string, @GetCurrentUserId() userId: string){
+    async toggle(@Param('id', ParseMongoIdPipe) id: string, @GetCurrentUserId() userId: string){
         return await this.wishlistService.toggle(id, userId)
     }
 }
