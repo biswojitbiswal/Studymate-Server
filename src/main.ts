@@ -92,7 +92,7 @@ async function bootstrap() {
 
   await app.listen(port, '0.0.0.0');
 
-  winstonLogger.info(`StudyNest is running on port ${port}`);
+  // winstonLogger.info(`StudyNest is running on port ${port}`);
   console.log(`🚀 StudyNest running on port: ${port}`);
 
 

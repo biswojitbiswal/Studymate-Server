@@ -8,14 +8,15 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { Multer } from "multer";
 import { Public } from "src/common/decorator/public.decorator";
 import { PaginationDto } from "src/common/dtos/pagination.dto";
+import { Throttle } from "@nestjs/throttler";
 
 
 @Controller({
     path: 'board',
     version: '1'
 })
-export class BoardController{
-    constructor(private readonly board: BoardService){}
+export class BoardController {
+    constructor(private readonly board: BoardService) { }
 
 
     @UseGuards(AuthGuard, RolesGuard)
@@ -25,7 +26,7 @@ export class BoardController{
     async create(
         @Body() dto: BoardDto,
         @UploadedFile() file?: Express.Multer.File,
-    ){
+    ) {
         return await this.board.create(dto, file)
     }
 
@@ -33,14 +34,20 @@ export class BoardController{
     @UseGuards(AuthGuard, RolesGuard)
     @Get()
     @Roles('ADMIN')
-    async get(@Query() dto: PaginationDto){
+    async get(@Query() dto: PaginationDto) {
         return await this.board.get(dto)
     }
 
 
     @Public()
     @Get('public')
-    async getForPublic(){
+    @Throttle({
+        ip: {
+            limit: 20,
+            ttl: 60_000,
+        },
+    })
+    async getForPublic() {
         return await this.board.getForPublic()
     }
 
@@ -50,7 +57,7 @@ export class BoardController{
     @Roles('ADMIN')
     async getById(
         @Param('id') id: string,
-    ){
+    ) {
         return await this.board.getById(id)
     }
 
@@ -64,7 +71,7 @@ export class BoardController{
         @Param('id') id: string,
         @Body() dto: UpdateBoardDto,
         @UploadedFile() file?: Express.Multer.File,
-    ){
+    ) {
         return await this.board.update(id, dto, file)
     }
 
@@ -75,7 +82,7 @@ export class BoardController{
     @Roles('ADMIN')
     async delete(
         @Param('id') id: string,
-    ){
+    ) {
         return await this.board.delete(id)
     }
 }

@@ -10,6 +10,7 @@ import { TutorApplyDto, TutorBrowseFilterDto, TutorProfileUpdateDto } from "./dt
 import { Public } from "common/decorator/public.decorator";
 import { AccountIntents, AllowTutorApplicant } from "common/decorator/account-access.decorator";
 import { SignupIntent } from "@prisma/client";
+import { Throttle } from "@nestjs/throttler";
 
 @Controller({
     path: "tutor",
@@ -34,6 +35,12 @@ export class TutorController {
 
     @Public()
     @Get('browse')
+    @Throttle({
+        ip: {
+            limit: 20,
+            ttl: 60_000,
+        },
+    })
     async browseTutors(
         @Query() dto: TutorBrowseFilterDto
     ) {

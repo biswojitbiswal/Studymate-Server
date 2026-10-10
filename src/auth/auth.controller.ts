@@ -31,6 +31,7 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorator/roles.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TurnstileService } from 'src/common/turnstile/turnstile.service';
+import { Throttle } from '@nestjs/throttler';
 
 const refreshCookieOptions = (expiresAt?: Date): CookieOptions => ({
   httpOnly: true,
@@ -54,6 +55,12 @@ export class AuthController {
 
   @Public()
   @Post('signup')
+  @Throttle({
+  ip: {
+    limit: 3,
+    ttl: 60_000,
+  },
+})
   async signup(@Body() dto: SignupDto, @Req() req: Request) {
     await this.turnstileService.verify(dto.turnstileToken, req.ip, 'signup');
     return await this.authService.signup(dto);
@@ -61,12 +68,24 @@ export class AuthController {
 
   @Public()
   @Post('verify-email/:token')
+  @Throttle({
+  ip: {
+    limit: 5,
+    ttl: 60_000,
+  },
+})
   async emailverification(@Param('token') token: string) {
     return await this.authService.emailverification(token);
   }
 
   @Public()
   @Post('signin')
+  @Throttle({
+  ip: {
+    limit: 5,
+    ttl: 60_000,
+  },
+})
   async signin(
     @Body() dto: SigninDto,
     @Req() req: Request,
@@ -94,6 +113,12 @@ export class AuthController {
 
   @Public()
   @Post('refresh')
+  @Throttle({
+  ip: {
+    limit: 5,
+    ttl: 60_000,
+  },
+})
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
@@ -138,6 +163,12 @@ export class AuthController {
 
   @Public()
   @Post('signout')
+  @Throttle({
+  ip: {
+    limit: 5,
+    ttl: 60_000,
+  },
+})
   async signout(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
@@ -170,6 +201,12 @@ export class AuthController {
 
   @Public()
   @Post('reset-password')
+  @Throttle({
+  ip: {
+    limit: 3,
+    ttl: 60_000,
+  },
+})
   async resetPassword(
     @Query('token') token: string,
     @Body() dto: ResetForgotPasswordDto,
